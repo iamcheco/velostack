@@ -1,36 +1,88 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# VeloStack 🚲
+
+> **Bike side-hustle engine** — find undervalued listings, diagnose issues, track component wear, and extract repair skills from YouTube videos.
+
+A personal side project built incrementally, one phase at a time. No deadline. Built to learn and to earn.
+
+## Live Phases
+
+| Phase | Feature | Status |
+|---|---|---|
+| 1 | Fix & Flip Listing Analyzer | ✅ Live |
+| 2 | Parts Wear Tracker (Strava) | 🔜 Next |
+| 3 | YouTube Skill Extractor | 🔜 Planned |
+| 4 | Pocket Bike Mechanic AI (OpenCV) | 🔜 Planned |
+| 5 | Freemium Monetization | 🔜 Planned |
+
+## Phase 1 — Fix & Flip Analyzer
+
+Paste any bike listing (title + description + price) and get:
+- **Deal verdict**: GREAT FLIP / FAIR DEAL / PASS / AVOID
+- **Detected issues**: chain wear, brake problems, rust, derailleur issues, etc. (EN + DE)
+- **Estimated repair cost**: per issue, summed
+- **Profit estimate**: `resale - asking_price - repair_cost`
+- **Confidence score**: based on whether comparable prices are available
+
+No AI needed — pure rule-based heuristics. Works for German and English listings.
+
+## Tech Stack
+
+- **Framework**: Next.js 15 (App Router)
+- **Styling**: Tailwind CSS v4 (custom dark theme)
+- **Language**: TypeScript
+- **Backend**: Next.js API Routes
+- **Validation**: Zod
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+git clone https://github.com/iamcheco/velostack.git
+cd velostack
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+velostack/
+├── app/
+│   ├── page.tsx              # Landing page
+│   ├── analyzer/page.tsx     # Phase 1: Fix & Flip tool
+│   ├── tracker/page.tsx      # Phase 2: Parts tracker (stub)
+│   ├── extractor/page.tsx    # Phase 3: YouTube extractor (stub)
+│   ├── mechanic/page.tsx     # Phase 4: AI mechanic (stub)
+│   └── api/
+│       └── analyze/route.ts  # Listing analysis API
+├── lib/
+│   ├── analyzer.ts           # Rules engine + profit formula
+│   └── cn.ts                 # Tailwind class helper
+└── app/globals.css           # Full design system
+```
 
-## Learn More
+## Environment Variables
 
-To learn more about Next.js, take a look at the following resources:
+Create `.env.local` (not committed):
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```env
+# Phase 3+
+GEMINI_API_KEY=
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Phase 2
+STRAVA_CLIENT_ID=
+STRAVA_CLIENT_SECRET=
 
-## Deploy on Vercel
+# Phase 5
+STRIPE_SECRET_KEY=
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Roadmap
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See [implementation_plan.md](./docs/implementation_plan.md) for the full phased plan.
+
+---
+
+Built by [@iamcheco](https://github.com/iamcheco)
