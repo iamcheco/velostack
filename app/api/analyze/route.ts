@@ -21,9 +21,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = analyzeListing(parsed.data);
+    // Call the newly async analyzeListing
+    const result = await analyzeListing(parsed.data);
     return NextResponse.json(result);
-  } catch {
-    return NextResponse.json({ error: "Analysis failed" }, { status: 500 });
+  } catch (err: any) {
+    console.error("Analysis Error:", err);
+    return NextResponse.json({ error: "Analysis failed", details: err.message }, { status: 500 });
   }
 }
