@@ -32,7 +32,7 @@ export default function HomePage() {
             }}
           >
             <Image 
-              src="/bike_bg.jpg" 
+              src="/bike_bg.png" 
               alt="Bike Background" 
               fill 
               style={{ objectFit: "cover", opacity: 0.8 }} 
