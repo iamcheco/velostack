@@ -1,27 +1,50 @@
 "use client";
+
+import React, { useState } from "react";
 import Link from "next/link";
+import { TrackerProvider } from "@/app/tracker/context";
+import Sidebar from "@/app/tracker/components/Sidebar";
+import PartsTab from "@/app/tracker/components/PartsTab";
+import RideLogTab from "@/app/tracker/components/RideLogTab";
+import WearReportTab from "@/app/tracker/components/WearReportTab";
 
 export default function TrackerPage() {
+  const [activeTab, setActiveTab] = useState<"parts" | "ride" | "wear">("parts");
+
   return (
-    <main style={{ position: "relative", zIndex: 1, minHeight: "100vh" }}>
-      <div style={{ borderBottom: "1px solid var(--border)", padding: "16px 24px", display: "flex", alignItems: "center", gap: 16 }}>
-        <Link href="/"><button className="btn-secondary" style={{ padding: "8px 14px", fontSize: "0.8rem" }}>← Back</button></Link>
+    <TrackerProvider>
+      {/* Top bar - same as analyzer */}
+      <div className="reddit-top-bar">
+        <div className="reddit-sr-list">
+          <Link href="/all">MY SUBREDDITS</Link> ▼ | <Link href="/all">POPULAR</Link> | <Link href="/all">ALL</Link> | <Link href="/all">RANDOM</Link> | <Link href="/all">BIKE_FLIP</Link> | <strong>VELOSTACK_TRACKER</strong>
+        </div>
         <div>
-          <h1 style={{ fontSize: "1.1rem" }}>Parts Wear Tracker</h1>
-          <p style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>Phase 2 · Coming soon</p>
+          want to join? <Link href="/" style={{ color: "#369", textDecoration: "underline" }}>Login or register</Link> in seconds. | English
         </div>
       </div>
-      <div style={{ maxWidth: 600, margin: "80px auto", padding: "0 24px", textAlign: "center" }}>
-        <div style={{ fontSize: "3rem", marginBottom: 20 }}>⚙️</div>
-        <h2 style={{ fontSize: "1.5rem", marginBottom: 12 }}>Coming in Phase 2</h2>
-        <p style={{ color: "var(--text-secondary)", lineHeight: 1.7 }}>
-          Log rides via Strava or manually. Track chain, brake pad, cassette and tire wear with formula-based predictions.
-          Get warned <em>before</em> parts fail.
-        </p>
-        <div style={{ marginTop: 32, padding: "16px 20px", background: "rgba(91,141,238,0.06)", border: "1px solid rgba(91,141,238,0.15)", borderRadius: "var(--radius-sm)", fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-          💡 Finish building Phase 1 first — then come back here.
+
+      {/* Header */}
+      <div className="reddit-header">
+        <div className="reddit-header-logo-container">
+          <Link href="/all" className="reddit-logo-text">VeloStack</Link>
+          <span className="reddit-sub-title">/r/velostack_tracker</span>
+        </div>
+        <div className="reddit-tabs">
+          <span className={`reddit-tab ${activeTab === "parts" ? "active" : ""}`} onClick={() => setActiveTab("parts")}>Parts</span>
+          <span className={`reddit-tab ${activeTab === "ride" ? "active" : ""}`} onClick={() => setActiveTab("ride")}>Ride Log</span>
+          <span className={`reddit-tab ${activeTab === "wear" ? "active" : ""}`} onClick={() => setActiveTab("wear")}>⚡ Wear Report</span>
         </div>
       </div>
-    </main>
+
+      {/* Main layout */}
+      <div className="reddit-main">
+        <div className="reddit-content">
+          {activeTab === "parts" && <PartsTab />}
+          {activeTab === "ride" && <RideLogTab />}
+          {activeTab === "wear" && <WearReportTab />}
+        </div>
+        <Sidebar />
+      </div>
+    </TrackerProvider>
   );
 }
