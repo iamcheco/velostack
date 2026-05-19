@@ -9,11 +9,11 @@ export default function DirectoryPage() {
         <span style={{ color: "#888" }}>|</span>
         <Link href="/analyzer" style={{ color: "#0000ff", textDecoration: "underline" }}>analyzer</Link>
         <span style={{ color: "#888" }}>|</span>
-        <span style={{ color: "#0000ff", textDecoration: "underline", opacity: 0.5 }}>tracker</span>
+        <Link href="/tracker" style={{ color: "#0000ff", textDecoration: "underline" }}>tracker</Link>
         <span style={{ color: "#888" }}>|</span>
-        <span style={{ color: "#0000ff", textDecoration: "underline", opacity: 0.5 }}>extractor</span>
+        <Link href="/extractor" style={{ color: "#0000ff", textDecoration: "underline" }}>extractor</Link>
         <span style={{ color: "#888" }}>|</span>
-        <span style={{ color: "#0000ff", textDecoration: "underline", opacity: 0.5 }}>mechanic</span>
+        <Link href="/mechanic" style={{ color: "#0000ff", textDecoration: "underline" }}>mechanic</Link>
       </header>
 
       <div style={{ padding: "15px" }}>
@@ -38,15 +38,15 @@ export default function DirectoryPage() {
               <td style={{ padding: "8px", border: "1px solid #ccc" }}>Paste any bike listing and get an instant deal verdict, estimated repair costs, and profit potential.</td>
             </tr>
             <tr>
-              <td style={{ padding: "8px", border: "1px solid #ccc", color: "#888" }}>COMING SOON</td>
+              <td style={{ padding: "8px", border: "1px solid #ccc", fontWeight: "bold", color: "green" }}>LIVE</td>
               <td style={{ padding: "8px", border: "1px solid #ccc" }}>Phase 2</td>
-              <td style={{ padding: "8px", border: "1px solid #ccc", color: "#0000ff", textDecoration: "underline" }}>Parts Wear Tracker</td>
+              <td style={{ padding: "8px", border: "1px solid #ccc" }}><Link href="/tracker" style={{ color: "#0000ff", textDecoration: "underline" }}>Parts Wear Tracker</Link></td>
               <td style={{ padding: "8px", border: "1px solid #ccc" }}>Log rides via Strava or manually. Get warnings before your chain, brakes, or cassette fail.</td>
             </tr>
-            <tr>
-              <td style={{ padding: "8px", border: "1px solid #ccc", color: "#888" }}>COMING SOON</td>
+             <tr>
+              <td style={{ padding: "8px", border: "1px solid #ccc", fontWeight: "bold", color: "green" }}>LIVE</td>
               <td style={{ padding: "8px", border: "1px solid #ccc" }}>Phase 3</td>
-              <td style={{ padding: "8px", border: "1px solid #ccc", color: "#0000ff", textDecoration: "underline" }}>YouTube Skill Extractor</td>
+              <td style={{ padding: "8px", border: "1px solid #ccc" }}><Link href="/extractor" style={{ color: "#0000ff", textDecoration: "underline" }}>YouTube Skill Extractor</Link></td>
               <td style={{ padding: "8px", border: "1px solid #ccc" }}>Paste a repair video URL and get an interactive step-by-step checklist with tools and time estimate.</td>
             </tr>
             <tr>

@@ -708,8 +708,9 @@ export default function AnalyzerPage() {
         <div className="reddit-tabs">
           <Link href="/all" className="reddit-tab">all phases</Link>
           <span className={`reddit-tab active`}>analyzer</span>
-          <span className="reddit-tab" style={{ opacity: 0.5, cursor: "not-allowed" }}>tracker</span>
-          <span className="reddit-tab" style={{ opacity: 0.5, cursor: "not-allowed" }}>extractor</span>
+          <Link href="/tracker" className="reddit-tab">tracker</Link>
+          <Link href="/extractor" className="reddit-tab">extractor</Link>
+          <Link href="/mechanic" className="reddit-tab">mechanic</Link>
         </div>
       </div>
 
