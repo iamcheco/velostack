@@ -170,7 +170,7 @@ A gravel bike sells quickly and at premium values in urban commuter spaces (e.g.
 ## 🌊 Category C: Blue Ocean Features (radically novel ideas)
 
 ### [Issue #6] Create the "Part-Out" Arbitrage Calculator
-* **Status**: 🔲 Backlog
+* **Status**: ✅ Completed
 * **Priority**: Medium
 * **Target Files**:
   - `lib/pricing.ts` (Define parts disassembly values)
@@ -189,9 +189,9 @@ Sometimes a complete bike is worth less than the sum of its parts. If a frame ha
 3. **Labor Allocation**: Factor in the time needed to pack and ship individual components.
 
 #### Acceptance Criteria
-- [ ] The Analyzer UI displays a toggle: "Whole Bike vs. Part-Out Valuation".
-- [ ] Renders an itemized list of components showing individual values (Drivetrain, Fork, Frame, Wheels).
-- [ ] Displays a step-by-step disassembly feasibility score based on tools needed.
+- [x] The Analyzer UI displays a toggle: "Whole Bike vs. Part-Out Valuation".
+- [x] Renders an itemized list of components showing individual values (Drivetrain, Fork, Frame, Wheels).
+- [x] Displays a step-by-step disassembly feasibility score based on tools needed.
 
 ---
 

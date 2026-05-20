@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import type { AnalysisResult, ExtractedComponent } from "@/lib/analyzer";
 import Link from "next/link";
+import PartOutDetails from "./components/PartOutDetails";
 
 // ── Types ──────────────────────────────────────────────────────
 interface FormState {
@@ -199,6 +200,7 @@ export default function AnalyzerPage() {
 
   const [localComponents, setLocalComponents] = useState<ExtractedComponent[]>([]);
   const [upgrades, setUpgrades] = useState<Record<string, { name: string; price: number }>>({});
+  const [appraisalTab, setAppraisalTab] = useState<"whole" | "partout">("whole");
   
   // Hydrate form from cached session to provide fluid navigation states
   useEffect(() => {
@@ -317,6 +319,7 @@ export default function AnalyzerPage() {
     setError(null);
     setLocalComponents([]);
     setUpgrades({});
+    setAppraisalTab("whole");
   };
 
   const handleComponentUpgrade = (type: string, newName: string, newPriceEur: number) => {
@@ -1057,7 +1060,33 @@ export default function AnalyzerPage() {
 
         {/* RESULTS THREAD VIEW */}
         {result && !loading && (
-          <div className="analyzer-grid">
+          <div className="space-y-6">
+            {/* Elegant Tab Toggles */}
+            <div className="flex border-b border-slate-200 gap-2 mb-2">
+              <button
+                onClick={() => setAppraisalTab("whole")}
+                className={`py-3 px-6 font-bold text-sm border-b-2 transition-all duration-200 flex items-center gap-2 cursor-pointer ${
+                  appraisalTab === "whole"
+                    ? "border-indigo-600 text-indigo-600 font-extrabold"
+                    : "border-transparent text-slate-400 hover:text-slate-600 hover:border-slate-300"
+                }`}
+              >
+                <span>🚲</span> Complete Bike Valuation
+              </button>
+              <button
+                onClick={() => setAppraisalTab("partout")}
+                className={`py-3 px-6 font-bold text-sm border-b-2 transition-all duration-200 flex items-center gap-2 cursor-pointer ${
+                  appraisalTab === "partout"
+                    ? "border-indigo-600 text-indigo-600 font-extrabold"
+                    : "border-transparent text-slate-400 hover:text-slate-600 hover:border-slate-300"
+                }`}
+              >
+                <span>🔧</span> Part-Out Teardown Calculator
+              </button>
+            </div>
+
+            {appraisalTab === "whole" ? (
+              <div className="analyzer-grid">
             
             {/* Left Content Pane */}
             <div className="analyzer-left-pane">
@@ -1438,7 +1467,18 @@ export default function AnalyzerPage() {
             </div>
 
           </div>
+        ) : (
+          result.partOutCalc && (
+            <PartOutDetails
+              partOutCalc={result.partOutCalc}
+              askingPrice={askingPriceNum}
+              wholeBikeProfit={dynamicProfit}
+              estimatedResalePrice={dynamicResaleValue}
+            />
+          )
         )}
+      </div>
+    )}
 
       </div>
     </main>

@@ -2,7 +2,7 @@ import { generateObject } from 'ai';
 import { z } from 'zod';
 import { google } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
-import { fetchLiveMarketPrice } from './pricing';
+import { fetchLiveMarketPrice, calculatePartOutValues, PartOutCalculation } from './pricing';
 
 // ============================================================
 // VeloStack — Listing Analyzer Rules Engine
@@ -51,6 +51,9 @@ export interface AnalysisResult {
   daysOnMarketModifierPercent: number;
   liquidityScore: "high" | "medium" | "low";
   isVerdictDowngraded: boolean;
+
+  // Part-Out Calculation
+  partOutCalc?: PartOutCalculation;
 }
 
 export function resolveMarketProfile(
@@ -253,6 +256,19 @@ export async function analyzeListing(input: {
   if (input.askingPrice < estimatedResalePrice * 0.85) priceVsMarket = "below";
   else if (input.askingPrice > estimatedResalePrice * 1.1) priceVsMarket = "above";
 
+  const bikeTierName: "premium" | "mid" | "budget" = 
+    estimatedResalePrice > 1000 ? "premium" : estimatedResalePrice > 400 ? "mid" : "budget";
+
+  const partOutCalc = calculatePartOutValues(
+    componentsWithPrices,
+    object.type,
+    bikeTierName,
+    input.askingPrice,
+    profit,
+    estimatedResalePrice,
+    input.description
+  );
+
   return {
     verdict,
     verdictReason,
@@ -270,7 +286,7 @@ export async function analyzeListing(input: {
     bikeTier: {
       brand: object.brand,
       type: object.type,
-      tier: estimatedResalePrice > 1000 ? "premium" : estimatedResalePrice > 400 ? "mid" : "budget"
+      tier: bikeTierName
     },
     priceVsMarket,
     
@@ -283,5 +299,8 @@ export async function analyzeListing(input: {
     daysOnMarketModifierPercent,
     liquidityScore,
     isVerdictDowngraded,
+
+    // Part-Out Calculation
+    partOutCalc,
   };
 }
