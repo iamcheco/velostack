@@ -44,7 +44,7 @@ Bike flippers routinely take parts off bikes (saddles, cassettes, tires) and sto
 ---
 
 ### [Issue #2] Implement 1-Click AI Auto-Listing Generator
-* **Status**: 🔲 Backlog
+* **Status**: ✅ Completed
 * **Priority**: Medium
 * **Target Files**:
   - `app/api/listing-generator/route.ts` [NEW] (LLM completion endpoint)
@@ -66,9 +66,9 @@ Once a bike's upgrades and repairs are completed, the flipper wants to list it f
 3. **Copy-to-Clipboard Utilities**: Provide a 1-click clipboard Copy button and SMS share hooks.
 
 #### Acceptance Criteria
-- [ ] Clicking "Generate Listing" on a bike opens a modal with customization controls (Asking Price, Platforms, Style).
-- [ ] API successfully formats prompt, calls Gemini/Groq, and streams/returns a clean, non-markdown formatted description text block.
-- [ ] Integrates a 1-click "Copy Listing text" interface returning a green "Copied!" check badge.
+- [x] Clicking "Generate Listing" on a bike opens a modal with customization controls (Asking Price, Platforms, Style).
+- [x] API successfully formats prompt, calls Gemini/Groq, and streams/returns a clean, non-markdown formatted description text block.
+- [x] Integrates a 1-click "Copy Listing text" interface returning a green "Copied!" check badge.
 
 ---
 

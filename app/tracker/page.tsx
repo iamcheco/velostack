@@ -2,18 +2,26 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { TrackerProvider } from "@/app/tracker/context";
+import { TrackerProvider, useTracker } from "@/app/tracker/context";
 import Sidebar from "@/app/tracker/components/Sidebar";
 import PartsTab from "@/app/tracker/components/PartsTab";
 import RideLogTab from "@/app/tracker/components/RideLogTab";
 import WearReportTab from "@/app/tracker/components/WearReportTab";
 import PartsBinTab from "@/app/tracker/components/PartsBinTab";
+import ListingGeneratorModal from "@/app/tracker/components/ListingGeneratorModal";
+import { BIKE_TYPE_LABELS } from "@/lib/tracker-types";
+import { getTotalBikeKm } from "@/lib/wear-engine";
 
-export default function TrackerPage() {
+function TrackerContent() {
+  const { store, selectedBikeId } = useTracker();
   const [activeTab, setActiveTab] = useState<"parts" | "ride" | "wear" | "parts_bin">("parts");
+  const [isListingModalOpen, setIsListingModalOpen] = useState(false);
+
+  const selectedBike = store.bikes.find(b => b.id === selectedBikeId);
+  const bikeParts = selectedBikeId ? (store.parts[selectedBikeId] ?? []) : [];
 
   return (
-    <TrackerProvider>
+    <div className="tracker-page-root">
       <style jsx global>{`
         @import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
 
@@ -88,6 +96,37 @@ export default function TrackerPage() {
           }
         }
 
+        /* Active Bike Banner */
+        .active-bike-banner {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 14px 20px;
+          margin-bottom: 20px;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
+          animation: fadeIn 0.25s ease;
+          gap: 16px;
+          flex-wrap: wrap;
+        }
+        .active-bike-banner-title {
+          font-size: 15px;
+          font-weight: 800;
+          color: #0f172a;
+          margin: 0;
+        }
+        .active-bike-banner-meta {
+          font-size: 11px;
+          color: #64748b;
+          margin-top: 2px;
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-4px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
         /* Modern White Card Styling */
         .modern-card {
           background: #ffffff;
@@ -144,6 +183,7 @@ export default function TrackerPage() {
           font-weight: 700;
           margin-bottom: 0;
           border-bottom: none;
+          outline: none;
         }
 
         /* Shared Form Inputs */
@@ -230,74 +270,115 @@ export default function TrackerPage() {
         .status-warning { background: #fee2e2; color: #991b1b; }
       `}</style>
 
-      <div className="tracker-page-root">
-        {/* Sticky Modern White Header */}
-        <header className="tracker-nav">
-          <Link href="/" className="tracker-nav-logo">
-            🚲 VeloStack
+      {/* Sticky Modern White Header */}
+      <header className="tracker-nav">
+        <Link href="/" className="tracker-nav-logo">
+          🚲 VeloStack
+        </Link>
+        <nav className="tracker-nav-links">
+          <Link href="/all" className="tracker-nav-link">
+            all phases
           </Link>
-          <nav className="tracker-nav-links">
-            <Link href="/all" className="tracker-nav-link">
-              all phases
-            </Link>
-            <Link href="/analyzer" className="tracker-nav-link">
-              analyzer
-            </Link>
-            <span className="tracker-nav-link active">tracker</span>
-            <Link href="/extractor" className="tracker-nav-link">
-              extractor
-            </Link>
-            <Link href="/mechanic" className="tracker-nav-link">
-              mechanic
-            </Link>
-          </nav>
-        </header>
+          <Link href="/analyzer" className="tracker-nav-link">
+            analyzer
+          </Link>
+          <span className="tracker-nav-link active">tracker</span>
+          <Link href="/extractor" className="tracker-nav-link">
+            extractor
+          </Link>
+          <Link href="/mechanic" className="tracker-nav-link">
+            mechanic
+          </Link>
+        </nav>
+      </header>
 
-        {/* Main Content Workspace */}
-        <div className="tracker-container">
-          <div className="tracker-grid">
-            {/* Left Content Column */}
-            <div>
-              {/* Sleek Tab Switcher */}
-              <div className="tracker-inner-tabs">
-                <button
-                  className={`tracker-inner-tab ${activeTab === "parts" ? "active" : ""}`}
-                  onClick={() => setActiveTab("parts")}
-                >
-                  🔩 Active Parts
-                </button>
-                <button
-                  className={`tracker-inner-tab ${activeTab === "ride" ? "active" : ""}`}
-                  onClick={() => setActiveTab("ride")}
-                >
-                  🚴 Ride Log
-                </button>
-                <button
-                  className={`tracker-inner-tab ${activeTab === "wear" ? "active" : ""}`}
-                  onClick={() => setActiveTab("wear")}
-                >
-                  ⚡ Wear Report
-                </button>
-                <button
-                  className={`tracker-inner-tab ${activeTab === "parts_bin" ? "active" : ""}`}
-                  onClick={() => setActiveTab("parts_bin")}
-                >
-                  📥 Garage Parts Bin
-                </button>
+      {/* Main Content Workspace */}
+      <div className="tracker-container">
+        {/* Dynamic Active Bike Banner */}
+        {selectedBike && (
+          <div className="active-bike-banner">
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ fontSize: 22 }}>🚲</span>
+              <div>
+                <h2 className="active-bike-banner-title">{selectedBike.name}</h2>
+                <div className="active-bike-banner-meta">
+                  Active {BIKE_TYPE_LABELS[selectedBike.type]} Build · {getTotalBikeKm(selectedBike.id, store.rides)} km total · {bikeParts.length} components tracked
+                </div>
               </div>
+            </div>
+            
+            <button
+              className="btn-modern-primary"
+              style={{ padding: "8px 14px", fontSize: 12, boxShadow: "0 4px 10px rgba(15, 23, 42, 0.15)" }}
+              onClick={() => setIsListingModalOpen(true)}
+            >
+              ✨ Generate Sale Listing
+            </button>
+          </div>
+        )}
 
-              {/* Tab Display Router */}
-              {activeTab === "parts" && <PartsTab />}
-              {activeTab === "ride" && <RideLogTab />}
-              {activeTab === "wear" && <WearReportTab />}
-              {activeTab === "parts_bin" && <PartsBinTab />}
+        <div className="tracker-grid">
+          {/* Left Content Column */}
+          <div>
+            {/* Sleek Tab Switcher */}
+            <div className="tracker-inner-tabs">
+              <button
+                className={`tracker-inner-tab ${activeTab === "parts" ? "active" : ""}`}
+                onClick={() => setActiveTab("parts")}
+              >
+                🔩 Active Parts
+              </button>
+              <button
+                className={`tracker-inner-tab ${activeTab === "ride" ? "active" : ""}`}
+                onClick={() => setActiveTab("ride")}
+              >
+                🚴 Ride Log
+              </button>
+              <button
+                className={`tracker-inner-tab ${activeTab === "wear" ? "active" : ""}`}
+                onClick={() => setActiveTab("wear")}
+              >
+                ⚡ Wear Report
+              </button>
+              <button
+                className={`tracker-inner-tab ${activeTab === "parts_bin" ? "active" : ""}`}
+                onClick={() => setActiveTab("parts_bin")}
+              >
+                📥 Garage Parts Bin
+              </button>
             </div>
 
-            {/* Right Sidebar Column */}
-            <Sidebar />
+            {/* Tab Display Router */}
+            {activeTab === "parts" && <PartsTab />}
+            {activeTab === "ride" && <RideLogTab />}
+            {activeTab === "wear" && <WearReportTab />}
+            {activeTab === "parts_bin" && <PartsBinTab />}
           </div>
+
+          {/* Right Sidebar Column */}
+          <Sidebar />
         </div>
       </div>
+
+      {/* Listing Generator Modal */}
+      {selectedBike && (
+        <ListingGeneratorModal
+          isOpen={isListingModalOpen}
+          onClose={() => setIsListingModalOpen(false)}
+          bike={selectedBike}
+          bikeParts={bikeParts}
+          allRides={store.rides}
+          replacements={store.replacements}
+        />
+      )}
+    </div>
+  );
+}
+
+export default function TrackerPage() {
+  return (
+    <TrackerProvider>
+      <TrackerContent />
     </TrackerProvider>
   );
 }
