@@ -54,9 +54,10 @@ export default function RideLogTab() {
 
   if (!selectedBikeId) {
     return (
-      <div className="reddit-form" style={{ textAlign: "center", color: "#888", padding: 40 }}>
-        <div style={{ fontSize: 28, marginBottom: 8 }}>🚴</div>
-        <div>Select a bike from the sidebar to log a ride.</div>
+      <div className="modern-card" style={{ textAlign: "center", color: "#64748b", padding: "60px 20px" }}>
+        <span style={{ fontSize: 40, display: "block", marginBottom: 12 }}>🚴</span>
+        <p style={{ fontWeight: 600, color: "#475569", margin: "0 0 4px 0" }}>No Bike Selected</p>
+        <p style={{ fontSize: 13, margin: 0 }}>Select a bike from the sidebar to log ride activities.</p>
       </div>
     );
   }
@@ -66,17 +67,104 @@ export default function RideLogTab() {
 
   return (
     <div>
+      <style jsx>{`
+        .stats-summary-bar {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 16px;
+          margin-bottom: 20px;
+        }
+        .stat-summary-card {
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          padding: 12px;
+          text-align: center;
+        }
+        .stat-summary-val {
+          font-size: 16px;
+          font-weight: 800;
+          color: #0f172a;
+          display: block;
+        }
+        .stat-summary-label {
+          font-size: 11px;
+          color: #64748b;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .ride-history-list {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .ride-history-row {
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          padding: 12px 16px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          transition: all 0.15s ease;
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+        .ride-history-row:hover {
+          border-color: #cbd5e1;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+        }
+        .ride-main-info {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
+        .ride-date {
+          font-size: 12px;
+          color: #64748b;
+          font-weight: 600;
+        }
+        .ride-dist-box {
+          font-size: 15px;
+          font-weight: 800;
+          color: #0f172a;
+        }
+        .ride-elev-box {
+          font-size: 12px;
+          color: #64748b;
+          font-weight: 600;
+        }
+        .ride-badges {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+        }
+        .ride-badge {
+          font-size: 11px;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          color: #475569;
+          padding: 3px 8px;
+          border-radius: 6px;
+          font-weight: 600;
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+        }
+      `}</style>
+
       {/* Log form */}
-      <div className="reddit-form">
-        <h2 style={{ fontSize: 14, color: "#336699", margin: "0 0 12px 0", fontWeight: "bold", borderBottom: "1px solid #cee3f8", paddingBottom: 6 }}>
+      <div className="modern-card">
+        <h3 className="modern-card-title">
           🚴 Log a Ride on <em>{selectedBike?.name}</em>
-        </h2>
+        </h3>
 
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 100 }}>
-            <label className="reddit-form-label">Distance (km)</label>
+          <div style={{ flex: 1, minWidth: 120 }}>
+            <label className="modern-form-label">Distance (km)</label>
             <input
-              className="reddit-form-input"
+              className="modern-form-input"
               type="number"
               min="0"
               step="0.1"
@@ -84,10 +172,10 @@ export default function RideLogTab() {
               onChange={e => setDistance(e.target.value)}
             />
           </div>
-          <div style={{ flex: 1, minWidth: 100 }}>
-            <label className="reddit-form-label">Elevation (m)</label>
+          <div style={{ flex: 1, minWidth: 120 }}>
+            <label className="modern-form-label">Elevation Gain (m)</label>
             <input
-              className="reddit-form-input"
+              className="modern-form-input"
               type="number"
               min="0"
               step="10"
@@ -97,26 +185,26 @@ export default function RideLogTab() {
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 12, marginTop: 8, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 12, marginTop: 12, flexWrap: "wrap" }}>
           <div style={{ flex: 1, minWidth: 100 }}>
-            <label className="reddit-form-label">Terrain</label>
-            <select className="reddit-form-input" value={terrain} onChange={e => setTerrain(e.target.value as TerrainType)}>
+            <label className="modern-form-label">Terrain Type</label>
+            <select className="modern-form-input" value={terrain} onChange={e => setTerrain(e.target.value as TerrainType)}>
               <option value="road">🛣️ Road</option>
               <option value="gravel">🪨 Gravel</option>
               <option value="trail">🌲 Trail</option>
             </select>
           </div>
           <div style={{ flex: 1, minWidth: 100 }}>
-            <label className="reddit-form-label">Condition</label>
-            <select className="reddit-form-input" value={condition} onChange={e => setCondition(e.target.value as ConditionType)}>
+            <label className="modern-form-label">Weather / Conditions</label>
+            <select className="modern-form-input" value={condition} onChange={e => setCondition(e.target.value as ConditionType)}>
               <option value="dry">☀️ Dry</option>
               <option value="wet">🌧️ Wet</option>
               <option value="muddy">💧 Muddy</option>
             </select>
           </div>
           <div style={{ flex: 1, minWidth: 100 }}>
-            <label className="reddit-form-label">Effort</label>
-            <select className="reddit-form-input" value={effort} onChange={e => setEffort(e.target.value as EffortLevel)}>
+            <label className="modern-form-label">Rider Effort</label>
+            <select className="modern-form-input" value={effort} onChange={e => setEffort(e.target.value as EffortLevel)}>
               <option value="easy">😊 Easy</option>
               <option value="moderate">😤 Moderate</option>
               <option value="hard">🔥 Hard</option>
@@ -124,13 +212,13 @@ export default function RideLogTab() {
           </div>
         </div>
 
-        <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
-          <button className="reddit-btn-submit" onClick={logRide}>
-            Log Ride
+        <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 12 }}>
+          <button className="btn-modern-primary" onClick={logRide}>
+            Log Active Ride
           </button>
           {submitted && (
-            <span style={{ color: "#2ecc71", fontWeight: "bold", fontSize: 11 }}>
-              ✓ Ride logged!
+            <span style={{ color: "#166534", fontWeight: 700, fontSize: 13, background: "#dcfce7", padding: "4px 10px", borderRadius: 6 }}>
+              ✓ Ride logged successfully!
             </span>
           )}
         </div>
@@ -138,36 +226,53 @@ export default function RideLogTab() {
 
       {/* Stats bar */}
       {bikeRides.length > 0 && (
-        <div style={{ display: "flex", gap: 20, padding: "10px 14px", background: "#f4f9fd", border: "1px solid #cee3f8", borderRadius: 4, marginBottom: 14, fontSize: 12 }}>
-          <div><strong>{bikeRides.length}</strong> <span style={{ color: "#666" }}>rides</span></div>
-          <div><strong>{totalKm.toFixed(1)} km</strong> <span style={{ color: "#666" }}>total</span></div>
-          <div><strong>{totalElev.toLocaleString()} m</strong> <span style={{ color: "#666" }}>elevation</span></div>
+        <div className="stats-summary-bar">
+          <div className="stat-summary-card">
+            <span className="stat-summary-val">{bikeRides.length}</span>
+            <span className="stat-summary-label">Total Rides</span>
+          </div>
+          <div className="stat-summary-card">
+            <span className="stat-summary-val">{totalKm.toFixed(1)} km</span>
+            <span className="stat-summary-label">Total Distance</span>
+          </div>
+          <div className="stat-summary-card">
+            <span className="stat-summary-val">{totalElev.toLocaleString()} m</span>
+            <span className="stat-summary-label">Total Elevation</span>
+          </div>
         </div>
       )}
 
       {/* Ride history */}
       {bikeRides.length > 0 && (
         <div>
-          <div style={{ fontWeight: "bold", fontSize: 13, color: "#222", marginBottom: 8 }}>Ride History</div>
-          {bikeRides.map(r => (
-            <div key={r.id} className="ride-row">
-              <span className="ride-row-date">{new Date(r.date).toLocaleDateString()}</span>
-              <span style={{ fontWeight: "bold" }}>{r.distanceKm} km</span>
-              <span style={{ color: "#666" }}>{r.elevationM} m ↑</span>
-              <span>{terrainEmoji[r.terrain]} {r.terrain}</span>
-              <span>{conditionEmoji[r.condition]} {r.condition}</span>
-              <span>{effortEmoji[r.effort]} {r.effort}</span>
-              {r.source === "strava" && (
-                <span style={{ color: "#fc4c02", fontSize: 10, fontWeight: "bold" }}>STRAVA</span>
-              )}
-            </div>
-          ))}
+          <h3 style={{ fontWeight: 700, fontSize: 14, color: "#0f172a", marginBottom: 12 }}>📋 Ride Activity History</h3>
+          <div className="ride-history-list">
+            {bikeRides.map(r => (
+              <div key={r.id} className="ride-history-row">
+                <div className="ride-main-info">
+                  <span className="ride-date">{new Date(r.date).toLocaleDateString()}</span>
+                  <span className="ride-dist-box">{r.distanceKm.toFixed(1)} km</span>
+                  <span className="ride-elev-box">+{r.elevationM}m</span>
+                </div>
+                <div className="ride-badges">
+                  <span className="ride-badge">{terrainEmoji[r.terrain]} {r.terrain}</span>
+                  <span className="ride-badge">{conditionEmoji[r.condition]} {r.condition}</span>
+                  <span className="ride-badge">{effortEmoji[r.effort]} {r.effort}</span>
+                  {r.source === "strava" && (
+                    <span className="ride-badge" style={{ color: "#fc4c02", borderColor: "#fc4c02", background: "#fff5f2" }}>STRAVA</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
       {bikeRides.length === 0 && (
-        <div style={{ color: "#888", fontSize: 12, padding: "12px 0" }}>
-          No rides logged yet. Use the form above to add your first ride.
+        <div className="modern-card" style={{ textAlign: "center", color: "#64748b", padding: "40px 20px" }}>
+          <span style={{ fontSize: 28, display: "block", marginBottom: 8 }}>📝</span>
+          <p style={{ margin: "0 0 4px 0", fontWeight: 600, color: "#475569" }}>No logged rides yet.</p>
+          <p style={{ margin: 0, fontSize: 12 }}>Submit your first ride using the logging card above!</p>
         </div>
       )}
     </div>

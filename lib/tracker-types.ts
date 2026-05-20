@@ -91,10 +91,21 @@ export interface WearResult {
   replacementCostEur: number;
 }
 
+export interface PartsBinItem {
+  id: string;
+  componentType: PartType | "saddle" | "grip"; // Maps to core parts plus custom accessories
+  brandModel: string;
+  condition: "new" | "excellent" | "fair" | "worn";
+  compatSpeeds?: number;
+  estimatedValueEur: number;
+  dateAdded: string;
+}
+
 export interface TrackerStore {
   bikes: Bike[];
   rides: RideLog[];
   parts: Record<string, PartProfile[]>;   // bikeId → PartProfile[]
   replacements: PartReplacement[];
   explanations: Record<string, string>;   // partKey → cached LLM text
+  partsBin?: PartsBinItem[];
 }

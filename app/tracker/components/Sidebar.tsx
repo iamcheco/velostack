@@ -30,12 +30,73 @@ export default function Sidebar() {
   };
 
   return (
-    <div className="reddit-sidebar">
+    <div className="tracker-sidebar">
+      <style jsx>{`
+        .tracker-sidebar {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+        .bike-item {
+          padding: 12px;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+          background: #ffffff;
+          margin-bottom: 8px;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .bike-item:hover {
+          border-color: #cbd5e1;
+          background: #f8fafc;
+        }
+        .bike-item.selected {
+          border-color: #0f172a;
+          background: #f8fafc;
+          box-shadow: 0 0 0 1px #0f172a;
+        }
+        .bike-item-name {
+          font-weight: 700;
+          font-size: 13px;
+          color: #0f172a;
+        }
+        .bike-item-type {
+          font-size: 11px;
+          color: #64748b;
+          margin-top: 2px;
+        }
+        .strava-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          background: #fc4c02;
+          color: #ffffff;
+          font-weight: 600;
+          font-size: 13px;
+          padding: 10px 16px;
+          border-radius: 8px;
+          border: 1px solid #fc4c02;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          text-decoration: none;
+          width: 100%;
+          box-sizing: border-box;
+        }
+        .strava-btn:hover {
+          background: #e04000;
+          border-color: #e04000;
+        }
+      `}</style>
+
       {/* Strava connect */}
-      <div className="reddit-sidebox">
-        <div className="reddit-sidebox-title">Connect Strava</div>
-        <p style={{ fontSize: 11, color: "#555", margin: "0 0 8px 0" }}>
-          Sync your rides automatically from Strava.
+      <div className="modern-card">
+        <h3 className="modern-card-title">🧡 Connect Strava</h3>
+        <p style={{ fontSize: 12, color: "#64748b", margin: "0 0 12px 0", lineHeight: 1.5 }}>
+          Sync your rides automatically from Strava to track component wear.
         </p>
         <a href="/api/strava/auth" className="strava-btn">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -46,47 +107,51 @@ export default function Sidebar() {
       </div>
 
       {/* Bike list */}
-      <div className="reddit-sidebox">
-        <div className="reddit-sidebox-title">My Bikes</div>
+      <div className="modern-card">
+        <h3 className="modern-card-title">🚲 My Bikes</h3>
         {store.bikes.length === 0 && (
-          <p style={{ fontSize: 11, color: "#888", margin: 0 }}>No bikes yet. Add one below.</p>
+          <p style={{ fontSize: 12, color: "#64748b", margin: 0, textAlign: "center", padding: "12px 0" }}>
+            No bikes added yet. Use the form below.
+          </p>
         )}
-        {store.bikes.map(b => {
-          const totalKm = getTotalBikeKm(b.id, store.rides);
-          const partCount = (store.parts[b.id] ?? []).length;
-          return (
-            <div
-              key={b.id}
-              className={`bike-item${selectedBikeId === b.id ? " selected" : ""}`}
-              onClick={() => setSelectedBikeId(b.id)}
-            >
-              <div>
-                <div>{b.name}</div>
-                <div className="bike-item-type">
-                  {BIKE_TYPE_LABELS[b.type]} · {totalKm} km · {partCount} part{partCount !== 1 ? "s" : ""}
+        <div style={{ maxHeight: "300px", overflowY: "auto" }}>
+          {store.bikes.map(b => {
+            const totalKm = getTotalBikeKm(b.id, store.rides);
+            const partCount = (store.parts[b.id] ?? []).length;
+            return (
+              <div
+                key={b.id}
+                className={`bike-item${selectedBikeId === b.id ? " selected" : ""}`}
+                onClick={() => setSelectedBikeId(b.id)}
+              >
+                <div>
+                  <div className="bike-item-name">{b.name}</div>
+                  <div className="bike-item-type">
+                    {BIKE_TYPE_LABELS[b.type]} · {totalKm} km · {partCount} part{partCount !== 1 ? "s" : ""}
+                  </div>
                 </div>
+                {selectedBikeId === b.id && (
+                  <span style={{ color: "#0f172a", fontSize: 12, fontWeight: 700 }}>Active</span>
+                )}
               </div>
-              {selectedBikeId === b.id && (
-                <span style={{ color: "#5f99cf", fontSize: 14 }}>▶</span>
-              )}
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       {/* Add bike form */}
-      <div className="reddit-sidebox">
-        <div className="reddit-sidebox-title">Add a Bike</div>
+      <div className="modern-card">
+        <h3 className="modern-card-title">➕ Add a Bike</h3>
         {!adding ? (
-          <button className="reddit-btn-submit" style={{ width: "100%" }} onClick={() => setAdding(true)}>
+          <button className="btn-modern-secondary" style={{ width: "100%", justifyContent: "center" }} onClick={() => setAdding(true)}>
             + New Bike
           </button>
         ) : (
           <>
-            <div className="reddit-form-group">
-              <label className="reddit-form-label">Name</label>
+            <div className="modern-form-group">
+              <label className="modern-form-label">Bike Name</label>
               <input
-                className="reddit-form-input"
+                className="modern-form-input"
                 type="text"
                 value={bikeName}
                 onChange={e => setBikeName(e.target.value)}
@@ -95,10 +160,10 @@ export default function Sidebar() {
                 autoFocus
               />
             </div>
-            <div className="reddit-form-group">
-              <label className="reddit-form-label">Type</label>
+            <div className="modern-form-group">
+              <label className="modern-form-label">Bike Type</label>
               <select
-                className="reddit-form-input"
+                className="modern-form-input"
                 value={bikeType}
                 onChange={e => setBikeType(e.target.value as BikeType)}
               >
@@ -107,19 +172,22 @@ export default function Sidebar() {
                 ))}
               </select>
             </div>
-            <div style={{ display: "flex", gap: 6 }}>
-              <button className="reddit-btn-submit" onClick={addBike}>Add</button>
-              <button className="reddit-btn-reset" onClick={() => setAdding(false)}>Cancel</button>
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <button className="btn-modern-primary" style={{ flex: 1, justifyContent: "center" }} onClick={addBike}>Add</button>
+              <button className="btn-modern-secondary" style={{ flex: 1, justifyContent: "center" }} onClick={() => setAdding(false)}>Cancel</button>
             </div>
           </>
         )}
       </div>
 
       {/* Info box */}
-      <div className="reddit-sidebox">
-        <div className="reddit-sidebox-title">About Tracker</div>
-        <p style={{ fontSize: 11, color: "#555", margin: 0, lineHeight: 1.6 }}>
-          Add your bike and its components, then log rides to track wear in real time. The ⚡ Wear Report uses a deterministic wear model based on distance, terrain, weather, and effort.
+      <div className="modern-card">
+        <h3 className="modern-card-title">ℹ️ Wear Tracking</h3>
+        <p style={{ fontSize: 12, color: "#64748b", margin: 0, lineHeight: 1.6 }}>
+          Register your active bikes and log their individual components, then track wear in real time by logging rides.
+        </p>
+        <p style={{ fontSize: 12, color: "#64748b", margin: "8px 0 0 0", lineHeight: 1.6 }}>
+          The ⚡ Wear Report calculates actual component health based on distance, terrain types, weather conditions, and relative rider effort.
         </p>
       </div>
     </div>
