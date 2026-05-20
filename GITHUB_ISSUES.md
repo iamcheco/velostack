@@ -115,7 +115,7 @@ Flipping is an accounting game. Flippers need to track their initial purchase pr
 ## 📈 Category B: The Pricing Moat (Data & Intelligence)
 
 ### [Issue #4] Build Proprietary "Sold" Classified Scraper & KBB Index
-* **Status**: 🔲 Backlog
+* **Status**: ✅ Completed
 * **Priority**: High
 * **Target Files**:
   - `app/api/market-data/route.ts` [NEW] (Query Pinkbike/eBay API or scrapers)
@@ -136,9 +136,9 @@ LLMs frequently hallucinate prices or supply generic ranges that ignore reality.
 3. **Caching Layer**: Store queries and pricing results in database/localStorage for 7 days to stay rate-limit compliant.
 
 #### Acceptance Criteria
-- [ ] `/api/market-data` takes a component/bike query, parses eBay/Pinkbike search pages, and returns structured clearing price statistics.
-- [ ] Replaces standard LLM price estimation in `/analyzer` with real empirical search ranges.
-- [ ] Renders a "Data Confidence Score Indicator" (based on sample size count of actual sold items found).
+- [x] `/api/market-data` takes a component/bike query, parses eBay/Pinkbike search pages, and returns structured clearing price statistics.
+- [x] Replaces standard LLM price estimation in `/analyzer` with real empirical search ranges.
+- [x] Renders a "Data Confidence Score Indicator" (based on sample size count of actual sold items found).
 
 ---
 

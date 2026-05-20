@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { AnalysisResult, ExtractedComponent } from "@/lib/analyzer";
 import Link from "next/link";
 
@@ -11,8 +11,29 @@ interface FormState {
   askingPrice: string;
 }
 
-// ── Comment Node Component ─────────────────────────────────────
-function CommentNode({
+interface MarketDataResult {
+  prices: number[];
+  bargainPrice: number;
+  medianPrice: number;
+  topPrice: number;
+  sampleSize: number;
+  confidence: "high" | "medium" | "low";
+  transactions: Array<{
+    price: number;
+    platform: string;
+    date: string;
+    condition: string;
+    title: string;
+  }>;
+}
+
+interface CacheEntry {
+  timestamp: number;
+  data: MarketDataResult;
+}
+
+// ── Custom Component Card (Purged Reddit Styling) ──────────────────
+function ComponentCard({
   label,
   type,
   upgradedInfo,
@@ -59,20 +80,19 @@ function CommentNode({
   };
 
   return (
-    <div className="reddit-comment">
-      <div className="reddit-comment-meta">
-        <span className="reddit-comment-meta-user">/u/component_bot_{type}</span>{" "}
-        <span style={{ fontWeight: "bold", color: valueToShow ? "#2ecc71" : "#888" }}>
+    <div className="component-upgrade-card">
+      <div className="component-upgrade-header">
+        <span className="component-tag">🔧 {label}</span>
+        <div className="component-value-badge">
           {valueToShow ? `+€${valueToShow} value` : "€0 value"}
-        </span>{" "}
-        {isUpgraded && <span className="reddit-flair reddit-flair-upgraded">upgraded</span>}{" "}
-        <span style={{ color: "#888" }}>3 minutes ago</span>
+          {isUpgraded && <span className="upgraded-flair">upgraded</span>}
+        </div>
       </div>
       
       {editing ? (
-        <div style={{ marginTop: 6, maxWidth: 450 }}>
+        <div className="component-upgrade-form">
           <input
-            className="reddit-form-input"
+            className="modern-input"
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
@@ -82,51 +102,42 @@ function CommentNode({
             }}
             disabled={loadingPrice}
             autoFocus
-            placeholder={`Enter new ${label.toLowerCase()} model...`}
+            placeholder={`Enter model name...`}
           />
-          {errorText && <div style={{ color: "#e74c3c", fontSize: 10, marginTop: 4 }}>{errorText}</div>}
-          <div style={{ display: "flex", gap: 6, marginTop: 6, alignItems: "center" }}>
+          {errorText && <div className="error-hint">{errorText}</div>}
+          <div className="upgrade-actions">
             <button 
-              className="reddit-btn-submit" 
+              className="primary-btn sm" 
               onClick={handleSave} 
               disabled={loadingPrice}
-              style={{ padding: "3px 8px", fontSize: 10 }}
             >
-              {loadingPrice ? "Searching..." : "save"}
+              {loadingPrice ? "Searching..." : "Save"}
             </button>
             <button 
-              className="reddit-btn-reset" 
+              className="secondary-btn sm" 
               onClick={() => setEditing(false)} 
               disabled={loadingPrice}
-              style={{ padding: "3px 8px", fontSize: 10, marginLeft: 0 }}
             >
-              cancel
+              Cancel
             </button>
-            <span style={{ fontSize: 10, color: "#888", marginLeft: 4 }}>Press Enter to search market</span>
+            <span className="hint-text">Press Enter to search market</span>
           </div>
         </div>
       ) : (
-        <>
-          <div className="reddit-comment-body">
-            <strong>{label}:</strong> {nameToShow}
+        <div className="component-upgrade-body">
+          <div className="component-model-display">
+            <strong>Model:</strong> {nameToShow}
           </div>
-          <div className="reddit-comment-footer">
-            <span style={{ color: "#369" }}>permalink</span>
-            <span style={{ color: "#369" }}>embed</span>
-            <span style={{ color: "#369" }}>save</span>
-            <span style={{ color: "#369" }}>parent</span>
-            <span 
-              style={{ color: "#ff4500", textDecoration: "underline", cursor: "pointer" }} 
-              onClick={() => {
-                setInputValue(nameToShow === "Not specified" ? "" : nameToShow);
-                setEditing(true);
-              }}
-            >
-              [edit/upgrade]
-            </span>
-            <span style={{ color: "#369" }}>reply</span>
-          </div>
-        </>
+          <button 
+            className="upgrade-edit-trigger"
+            onClick={() => {
+              setInputValue(nameToShow === "Not specified" ? "" : nameToShow);
+              setEditing(true);
+            }}
+          >
+            Edit / Upgrade
+          </button>
+        </div>
       )}
     </div>
   );
@@ -141,19 +152,34 @@ export default function AnalyzerPage() {
   });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [marketData, setMarketData] = useState<MarketDataResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [localComponents, setLocalComponents] = useState<ExtractedComponent[]>([]);
   const [upgrades, setUpgrades] = useState<Record<string, { name: string; price: number }>>({});
   
-  // Upvotes state for the Reddit post upvote/downvote mockup
-  const [upvotes, setUpvotes] = useState(128);
-  const [userVote, setUserVote] = useState<"up" | "down" | null>(null);
+  // Hydrate form from cached session to provide fluid navigation states
+  useEffect(() => {
+    const savedForm = sessionStorage.getItem("vst_analyzer_form");
+    if (savedForm) {
+      try {
+        setForm(JSON.parse(savedForm));
+      } catch (e) {
+        console.warn("Failed to load cached analyzer form data");
+      }
+    }
+  }, []);
+
+  const saveFormState = (newForm: FormState) => {
+    setForm(newForm);
+    sessionStorage.setItem("vst_analyzer_form", JSON.stringify(newForm));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setResult(null);
+    setMarketData(null);
 
     const price = parseFloat(form.askingPrice);
     if (isNaN(price) || price <= 0) {
@@ -163,7 +189,8 @@ export default function AnalyzerPage() {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/analyze", {
+      // 1. Fetch LLM-powered listing analysis
+      const analysisPromise = fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -171,16 +198,68 @@ export default function AnalyzerPage() {
           description: form.description,
           askingPrice: price,
         }),
+      }).then(res => {
+        if (!res.ok) throw new Error("Analysis failed");
+        return res.json();
       });
-      if (!res.ok) throw new Error("Analysis failed");
-      const data: AnalysisResult = await res.json();
-      setResult(data);
-      setLocalComponents(data.components || []);
-      setUpgrades({}); // Clear any previous upgrades
-      setUpvotes(Math.floor(Math.random() * 50) + 80);
-      setUserVote(null);
-    } catch {
-      setError("Something went wrong. Please try again.");
+
+      // 2. Fetch completed listings market data with 7-day client cache
+      const fetchMarketData = async (): Promise<MarketDataResult> => {
+        const cacheKey = form.title.toLowerCase().trim();
+        const localCache = localStorage.getItem("vst_market_data_cache");
+        let cacheObj: Record<string, CacheEntry> = {};
+        
+        if (localCache) {
+          try {
+            cacheObj = JSON.parse(localCache);
+            const entry = cacheObj[cacheKey];
+            const sevenDays = 7 * 24 * 60 * 60 * 1000;
+            if (entry && (Date.now() - entry.timestamp) < sevenDays) {
+              console.log("Serving completed sales market index from 7-day client cache:", cacheKey);
+              return entry.data;
+            }
+          } catch (e) {
+            console.warn("Failed to parse market cache");
+          }
+        }
+
+        // Cache miss: execute scraper call
+        const marketRes = await fetch("/api/market-data", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query: form.title,
+            category: "bike"
+          })
+        });
+        
+        if (!marketRes.ok) throw new Error("Market data retrieval failed");
+        const data = await marketRes.json();
+        
+        // Save to cache
+        cacheObj[cacheKey] = {
+          timestamp: Date.now(),
+          data
+        };
+        localStorage.setItem("vst_market_data_cache", JSON.stringify(cacheObj));
+        return data;
+      };
+
+      // Run both calls concurrently to maximize load speeds
+      const [analysisResult, marketStats] = await Promise.all([
+        analysisPromise,
+        fetchMarketData().catch(err => {
+          console.warn("Scraper endpoint failed. Falling back gracefully...", err);
+          return null;
+        })
+      ]);
+
+      setResult(analysisResult);
+      setLocalComponents(analysisResult.components || []);
+      setMarketData(marketStats);
+      setUpgrades({});
+    } catch (err: any) {
+      setError(err.message || "Failed to analyze listings. Please check network parameters.");
     } finally {
       setLoading(false);
     }
@@ -188,7 +267,9 @@ export default function AnalyzerPage() {
 
   const handleReset = () => {
     setForm({ title: "", description: "", askingPrice: "" });
+    sessionStorage.removeItem("vst_analyzer_form");
     setResult(null);
+    setMarketData(null);
     setError(null);
     setLocalComponents([]);
     setUpgrades({});
@@ -201,50 +282,50 @@ export default function AnalyzerPage() {
     }));
   };
 
-  // Upvote / downvote click handlers
-  const handleUpvote = () => {
-    if (userVote === "up") {
-      setUserVote(null);
-      setUpvotes(prev => prev - 1);
-    } else if (userVote === "down") {
-      setUserVote("up");
-      setUpvotes(prev => prev + 2);
-    } else {
-      setUserVote("up");
-      setUpvotes(prev => prev + 1);
-    }
-  };
-
-  const handleDownvote = () => {
-    if (userVote === "down") {
-      setUserVote(null);
-      setUpvotes(prev => prev + 1);
-    } else if (userVote === "up") {
-      setUserVote("down");
-      setUpvotes(prev => prev - 2);
-    } else {
-      setUserVote("down");
-      setUpvotes(prev => prev - 1);
-    }
-  };
-
-  // Calculations
+  // Pricing calculations
   const askingPriceNum = parseFloat(form.askingPrice) || 0;
   const baseRepairCost = result?.estimatedRepairCost || 0;
   const baseInvestment = result ? askingPriceNum + baseRepairCost : 0;
   
-  // Total cost of all upgrades
   const upgradesTotal = Object.values(upgrades).reduce((sum, item) => sum + item.price, 0);
   const upgradedInvestment = baseInvestment + upgradesTotal;
 
   const currentEstimatedResale = result?.estimatedResalePrice || 0;
-  // Dynamic resale: base resale + (total upgrades * 0.5)
   const dynamicResaleValue = currentEstimatedResale + (upgradesTotal * 0.5);
   const dynamicProfit = dynamicResaleValue - upgradedInvestment;
 
-  const profitColor = dynamicProfit >= 80 ? "#2ecc71" : dynamicProfit >= 25 ? "#f39c12" : "#e74c3c";
+  const profitColor = dynamicProfit >= 80 ? "#10b981" : dynamicProfit >= 25 ? "#f59e0b" : "#ef4444";
 
-  // Component Types list to render in order
+  // Enforce pricing zone markers based on statistical clearances
+  let clearingMeterPercent = 50;
+  let priceZone: "Bargain" | "Fair Market" | "Overpriced" | "Unknown" = "Unknown";
+  let zoneColor = "#64748b";
+
+  if (marketData && marketData.bargainPrice && marketData.topPrice) {
+    const { bargainPrice, medianPrice, topPrice } = marketData;
+    
+    if (askingPriceNum < bargainPrice) {
+      priceZone = "Bargain";
+      zoneColor = "#10b981"; // Emerald
+      // Map asking price in the lower bounds
+      const ratio = askingPriceNum / bargainPrice;
+      clearingMeterPercent = Math.max(5, Math.round(ratio * 30));
+    } else if (askingPriceNum <= topPrice) {
+      priceZone = "Fair Market";
+      zoneColor = "#3b82f6"; // Indigo/blue
+      // Map asking price linearly between bargain and top
+      const range = topPrice - bargainPrice || 1;
+      const ratio = (askingPriceNum - bargainPrice) / range;
+      clearingMeterPercent = 30 + Math.round(ratio * 40); // Between 30% and 70%
+    } else {
+      priceZone = "Overpriced";
+      zoneColor = "#ef4444"; // Red
+      // Map asking price in higher bounds
+      const ratio = (askingPriceNum - topPrice) / (topPrice || 1);
+      clearingMeterPercent = Math.min(95, 70 + Math.round(ratio * 25));
+    }
+  }
+
   const componentTypes = [
     { type: "saddle", label: "Saddle" },
     { type: "handlebars", label: "Cockpit" },
@@ -256,702 +337,733 @@ export default function AnalyzerPage() {
   ];
 
   return (
-    <main className="reddit-page">
-      {/* ── Embedded Reddit Stylesheet ─────────────────────────────── */}
+    <main className="analyzer-page-root">
       <style jsx global>{`
-        .reddit-page {
-          font-family: Verdana, Arial, Helvetica, sans-serif !important;
-          font-size: 12px !important;
-          color: #222 !important;
-          background-color: #ffffff !important;
+        @import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
+        .analyzer-page-root {
+          font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          background-color: #f8fafc;
+          color: #0f172a;
           min-height: 100vh;
-          padding: 0;
           margin: 0;
+          padding: 0;
         }
 
-        .reddit-top-bar {
-          background-color: #f0f0f0;
-          border-bottom: 1px solid #e0e0e0;
-          font-size: 10px;
-          color: #555;
-          padding: 4px 10px;
+        /* sticky minimalist header */
+        .analyzer-nav {
+          background: #ffffff;
+          border-bottom: 1px solid #e2e8f0;
+          padding: 14px 24px;
+          position: sticky;
+          top: 0;
+          z-index: 100;
           display: flex;
           justify-content: space-between;
           align-items: center;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
         }
-
-        .reddit-sr-list a {
-          color: #555;
+        .analyzer-logo {
+          font-weight: 800;
+          font-size: 20px;
+          color: #0f172a;
           text-decoration: none;
-          margin-right: 5px;
-        }
-        .reddit-sr-list a:hover {
-          text-decoration: underline;
-        }
-
-        .reddit-header {
-          background-color: #cee3f8;
-          border-bottom: 1px solid #5f99cf;
-          padding: 15px 20px 0 20px;
           display: flex;
-          flex-direction: column;
-          justify-content: flex-end;
-          min-height: 70px;
-          position: relative;
+          align-items: center;
+          gap: 6px;
         }
-
-        .reddit-header-logo-container {
+        .analyzer-nav-links {
           display: flex;
-          align-items: flex-end;
-          margin-bottom: 5px;
-          gap: 10px;
+          gap: 4px;
         }
-
-        .reddit-logo-text {
-          font-size: 22px;
-          font-weight: bold;
-          color: #55585a;
+        .analyzer-nav-link {
+          padding: 6px 12px;
+          border-radius: 6px;
+          font-size: 13px;
+          font-weight: 600;
+          color: #64748b;
           text-decoration: none;
+          transition: all 0.2s ease;
+        }
+        .analyzer-nav-link:hover {
+          color: #0f172a;
+          background: #f1f5f9;
+        }
+        .analyzer-nav-link.active {
+          color: #0f172a;
+          background: #f1f5f9;
+          font-weight: 700;
         }
 
-        .reddit-sub-title {
-          font-size: 18px;
-          color: #555;
-          font-weight: normal;
-        }
-
-        .reddit-tabs {
-          display: flex;
-          gap: 2px;
-          margin-bottom: -1px;
-          padding-left: 10px;
-        }
-
-        .reddit-tab {
-          background-color: #eff7ff;
-          border: 1px solid #5f99cf;
-          border-bottom: none;
-          padding: 4px 12px;
-          font-size: 11px;
-          font-weight: bold;
-          color: #555;
-          text-decoration: none;
-          border-radius: 4px 4px 0 0;
-          cursor: pointer;
-        }
-
-        .reddit-tab.active {
-          background-color: #ffffff;
-          border-bottom: 1px solid #ffffff;
-          color: #ff4500 !important; /* reddit orange */
-        }
-
-        .reddit-main {
-          display: flex;
-          padding: 15px;
-          gap: 20px;
-          max-width: 1200px;
+        /* standard layout grid */
+        .analyzer-container {
+          max-width: 1280px;
           margin: 0 auto;
-          align-items: start;
+          padding: 24px;
+        }
+        .analyzer-grid {
+          display: grid;
+          grid-template-columns: 1fr 340px;
+          gap: 24px;
+        }
+        @media (max-width: 1024px) {
+          .analyzer-grid {
+            grid-template-columns: 1fr;
+          }
         }
 
-        .reddit-content {
-          flex: 1;
-          min-width: 0;
+        /* Modern card layout styling */
+        .modern-card {
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 20px;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
+          margin-bottom: 20px;
         }
-
-        .reddit-sidebar {
-          width: 300px;
-          flex-shrink: 0;
+        .modern-card-title {
+          font-size: 15px;
+          font-weight: 700;
+          color: #0f172a;
+          margin: 0 0 14px 0;
           display: flex;
-          flex-direction: column;
-          gap: 12px;
+          align-items: center;
+          gap: 8px;
+          border-bottom: 1px solid #f1f5f9;
+          padding-bottom: 8px;
         }
 
-        .reddit-sidebox {
-          background-color: #f4f9fd;
-          border: 1px solid #cee3f8;
-          border-radius: 4px;
-          padding: 12px;
+        /* form layout */
+        .form-group {
+          margin-bottom: 18px;
         }
-
-        .reddit-sidebox-title {
+        .form-label {
+          display: block;
+          font-size: 13px;
+          font-weight: 600;
+          color: #334155;
+          margin-bottom: 6px;
+        }
+        .modern-input {
+          width: 100%;
+          padding: 10px 14px;
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          font-family: inherit;
+          font-size: 14px;
+          color: #0f172a;
+          box-sizing: border-box;
+          transition: border-color 0.2s ease;
+        }
+        .modern-input:focus {
+          border-color: #3b82f6;
+          outline: none;
+        }
+        .input-subtext {
           font-size: 11px;
-          font-weight: bold;
-          color: #336699;
-          border-bottom: 1px solid #cee3f8;
-          padding-bottom: 4px;
-          margin-bottom: 8px;
+          color: #64748b;
+          margin-top: 4px;
+          display: block;
+        }
+
+        /* Button elements */
+        .primary-btn {
+          background: #0f172a;
+          color: #ffffff;
+          border: none;
+          padding: 10px 18px;
+          font-weight: 600;
+          font-size: 14px;
+          cursor: pointer;
+          border-radius: 8px;
+          transition: all 0.2s ease;
+        }
+        .primary-btn:hover {
+          background: #1e293b;
+        }
+        .primary-btn:disabled {
+          background: #94a3b8;
+          cursor: not-allowed;
+        }
+        .secondary-btn {
+          background: #ffffff;
+          color: #334155;
+          border: 1px solid #e2e8f0;
+          padding: 10px 18px;
+          font-weight: 600;
+          font-size: 14px;
+          cursor: pointer;
+          border-radius: 8px;
+          margin-left: 8px;
+          transition: all 0.2s ease;
+        }
+        .secondary-btn:hover {
+          background: #f8fafc;
+        }
+        .primary-btn.sm, .secondary-btn.sm {
+          padding: 4px 10px;
+          font-size: 12px;
+          border-radius: 6px;
+        }
+
+        /* appraiser verdict cards */
+        .verdict-banner-card {
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 24px;
+          margin-bottom: 20px;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+          position: relative;
+          overflow: hidden;
+        }
+        .verdict-glow-emerald { border-top: 5px solid #10b981; }
+        .verdict-glow-amber { border-top: 5px solid #f59e0b; }
+        .verdict-glow-red { border-top: 5px solid #ef4444; }
+
+        .verdict-header-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 12px;
+        }
+        .verdict-headline {
+          font-size: 20px;
+          font-weight: 800;
+          color: #0f172a;
+          margin: 0;
+        }
+        .verdict-badge {
+          padding: 4px 12px;
+          border-radius: 9999px;
+          font-size: 12px;
+          font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.5px;
         }
+        .badge-great { background: #d1fae5; color: #065f46; }
+        .badge-fair { background: #fef3c7; color: #92400e; }
+        .badge-pass { background: #f3f4f6; color: #374151; }
+        .badge-avoid { background: #fee2e2; color: #991b1b; }
 
-        .reddit-post {
-          display: flex;
-          gap: 10px;
-          padding: 8px;
-          margin-bottom: 15px;
-          background: #ffffff;
+        .verdict-reason {
+          font-size: 14px;
+          line-height: 1.6;
+          color: #334155;
+          margin: 0 0 16px 0;
         }
 
-        .reddit-post-voting {
+        /* repair issues listing */
+        .repairs-box {
+          border-top: 1px dashed #e2e8f0;
+          padding-top: 14px;
+          margin-top: 14px;
+        }
+        .repairs-title {
+          font-size: 13px;
+          font-weight: 700;
+          color: #ef4444;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-bottom: 8px;
+        }
+        .repairs-list {
+          margin: 0;
+          padding-left: 20px;
+          font-size: 12px;
+          color: #475569;
+          line-height: 1.6;
+        }
+
+        /* component directory and custom cards */
+        .components-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 12px;
+        }
+        .component-upgrade-card {
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 14px 18px;
+          transition: all 0.2s ease;
+        }
+        .component-upgrade-card:hover {
+          border-color: #cbd5e1;
+        }
+        .component-upgrade-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 8px;
+        }
+        .component-tag {
+          font-weight: 700;
+          font-size: 13px;
+          color: #334155;
+        }
+        .component-value-badge {
+          font-size: 12px;
+          font-weight: 600;
+          color: #10b981;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .upgraded-flair {
+          background: #dbeafe;
+          color: #2563eb;
+          font-size: 9px;
+          padding: 1px 4px;
+          border-radius: 4px;
+          text-transform: uppercase;
+        }
+        .component-upgrade-body {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 13px;
+          color: #475569;
+        }
+        .upgrade-edit-trigger {
+          background: none;
+          border: none;
+          color: #2563eb;
+          font-weight: 600;
+          cursor: pointer;
+          font-size: 12px;
+          padding: 0;
+          text-decoration: underline;
+        }
+        .component-upgrade-form {
+          margin-top: 8px;
+        }
+        .upgrade-actions {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-top: 8px;
+        }
+        .hint-text {
+          font-size: 10px;
+          color: #94a3b8;
+        }
+        .error-hint {
+          color: #ef4444;
+          font-size: 11px;
+          margin-top: 4px;
+        }
+
+        /* sidebar tables */
+        .metrics-table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        .metrics-table td {
+          padding: 8px 0;
+          border-bottom: 1px solid #f1f5f9;
+          font-size: 13px;
+        }
+        .metrics-table tr:last-child td {
+          border-bottom: none;
+        }
+        .metrics-table td.label {
+          color: #64748b;
+          font-weight: 600;
+        }
+        .metrics-table td.value {
+          text-align: right;
+          font-weight: 700;
+          color: #0f172a;
+        }
+
+        /* Kelley Blue Book components */
+        .kbb-percentile-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 8px;
+          margin-bottom: 18px;
+        }
+        .kbb-percentile-card {
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 10px;
+          text-align: center;
+        }
+        .kbb-percentile-label {
+          font-size: 10px;
+          font-weight: 700;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          margin-bottom: 4px;
+        }
+        .kbb-percentile-value {
+          font-size: 14px;
+          font-weight: 800;
+          color: #0f172a;
+        }
+
+        /* KBB Index Clearing Meter HUD */
+        .clearing-meter-container {
+          margin-top: 14px;
+          padding-bottom: 8px;
+        }
+        .clearing-meter-bar {
+          height: 10px;
+          border-radius: 9999px;
+          position: relative;
+          background: linear-gradient(to right, #10b981 0%, #10b981 30%, #3b82f6 30%, #3b82f6 70%, #ef4444 70%, #ef4444 100%);
+          margin-bottom: 14px;
+        }
+        .clearing-meter-pointer {
+          position: absolute;
+          top: -4px;
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
+          background: #0f172a;
+          border: 3px solid #ffffff;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), 0 0 8px rgba(15, 23, 42, 0.4);
+          transform: translateX(-50%);
+          transition: left 0.3s ease;
+        }
+        .clearing-meter-labels {
+          display: flex;
+          justify-content: space-between;
+          font-size: 9px;
+          font-weight: 700;
+          color: #64748b;
+          text-transform: uppercase;
+          margin-bottom: 8px;
+        }
+        .meter-label-left { color: #10b981; }
+        .meter-label-center { color: #3b82f6; }
+        .meter-label-right { color: #ef4444; }
+
+        .confidence-badge {
+          display: inline-block;
+          font-size: 10px;
+          font-weight: 700;
+          padding: 2px 8px;
+          border-radius: 4px;
+          text-transform: uppercase;
+        }
+        .confidence-high { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+        .confidence-medium { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+        .confidence-low { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+
+        /* Scraped Transactions Table */
+        .scraped-table-container {
+          max-height: 280px;
+          overflow-y: auto;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          margin-top: 10px;
+        }
+        .scraped-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 12px;
+          text-align: left;
+        }
+        .scraped-table th {
+          background: #f8fafc;
+          padding: 8px 12px;
+          font-weight: 700;
+          color: #475569;
+          border-bottom: 1px solid #e2e8f0;
+          position: sticky;
+          top: 0;
+          z-index: 10;
+        }
+        .scraped-table td {
+          padding: 10px 12px;
+          border-bottom: 1px solid #f1f5f9;
+          color: #334155;
+          vertical-align: middle;
+        }
+        .scraped-table tr:last-child td {
+          border-bottom: none;
+        }
+        .platform-badge {
+          font-size: 9px;
+          font-weight: 800;
+          padding: 1px 6px;
+          border-radius: 4px;
+          text-transform: uppercase;
+        }
+        .platform-ebay { background: #e0f2fe; color: #0369a1; }
+        .platform-pinkbike { background: #fce7f3; color: #9d174d; }
+        .platform-other { background: #f1f5f9; color: #475569; }
+
+        /* Loader HUD */
+        .loader-overlay {
           display: flex;
           flex-direction: column;
           align-items: center;
-          width: 35px;
-          font-size: 11px;
-          font-weight: bold;
-          color: #c0c0c0;
-          user-select: none;
+          justify-content: center;
+          padding: 60px 20px;
         }
-
-        .reddit-arrow-up, .reddit-arrow-down {
-          cursor: pointer;
-          font-size: 20px;
-          color: #c0c0c0;
-          transition: color 0.1s ease;
-          line-height: 1;
+        .spinner {
+          width: 48px;
+          height: 48px;
+          border: 4px solid #e2e8f0;
+          border-top-color: #0f172a;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-bottom: 20px;
         }
-        .reddit-arrow-up:hover, .reddit-arrow-up.active {
-          color: #ff4500;
+        @keyframes spin {
+          to { transform: rotate(360deg); }
         }
-        .reddit-arrow-down:hover, .reddit-arrow-down.active {
-          color: #5f99cf;
-        }
-
-        .reddit-post-body {
-          flex: 1;
-        }
-
-        .reddit-post-title {
+        .loading-title {
           font-size: 16px;
-          color: #0000ff;
-          text-decoration: underline;
-          margin: 0 0 4px 0;
-          font-weight: normal;
+          font-weight: 800;
+          color: #0f172a;
+          margin-bottom: 6px;
+        }
+        .loading-desc {
+          font-size: 13px;
+          color: #64748b;
         }
 
-        .reddit-post-meta {
-          font-size: 10px;
-          color: #888;
-          margin-bottom: 8px;
-        }
-
-        .reddit-post-meta a {
-          color: #369;
-          text-decoration: none;
-        }
-        .reddit-post-meta a:hover {
-          text-decoration: underline;
-        }
-
-        .reddit-post-text {
-          background-color: #fafafa;
-          border: 1px solid #eef2f7;
-          border-radius: 4px;
-          padding: 12px 16px;
+        /* Rules card style list */
+        .rules-list {
+          margin: 0;
+          padding-left: 18px;
           font-size: 12px;
-          line-height: 1.5;
-          color: #333;
-          white-space: pre-wrap;
+          color: #475569;
+          line-height: 1.6;
         }
-
-        .reddit-post-footer {
-          font-size: 11px;
-          font-weight: bold;
-          color: #888;
-          margin-top: 6px;
-          display: flex;
-          gap: 10px;
-        }
-
-        .reddit-post-footer span {
-          cursor: pointer;
-        }
-        .reddit-post-footer span:hover {
-          color: #222;
-        }
-
-        .reddit-comment-section {
-          border-top: 1px solid #ddd;
-          margin-top: 15px;
-          padding-top: 15px;
-        }
-
-        .reddit-comments-title {
-          font-size: 14px;
-          font-weight: bold;
-          color: #222;
-          margin-bottom: 12px;
-        }
-
-        .reddit-comment {
-          border-left: 1px dotted #ccc;
-          padding-left: 12px;
-          margin-bottom: 15px;
-          margin-top: 8px;
-        }
-
-        .reddit-comment-meta {
-          font-size: 10px;
-          color: #888;
-          margin-bottom: 4px;
-        }
-
-        .reddit-comment-meta-user {
-          font-weight: bold;
-          color: #369;
-        }
-
-        .reddit-comment-body {
-          font-size: 12px;
-          line-height: 1.4;
-          color: #222;
-          margin-top: 4px;
-        }
-
-        .reddit-comment-footer {
-          font-size: 10px;
-          color: #888;
-          margin-top: 4px;
-          display: flex;
-          gap: 8px;
-          font-weight: bold;
-        }
-
-        .reddit-comment-footer span {
-          cursor: pointer;
-        }
-        .reddit-comment-footer span:hover {
-          color: #222;
-        }
-
-        .reddit-form {
-          background-color: #fafafa;
-          border: 1px solid #dbdbdb;
-          border-radius: 4px;
-          padding: 20px;
-        }
-
-        .reddit-form-group {
-          margin-bottom: 15px;
-        }
-
-        .reddit-form-label {
-          display: block;
-          font-weight: bold;
-          font-size: 12px;
-          margin-bottom: 5px;
-          color: #333;
-        }
-
-        .reddit-form-input {
-          width: 100%;
-          padding: 6px 8px;
-          border: 1px solid #ccc;
-          border-radius: 3px;
-          font-family: Verdana, sans-serif;
-          font-size: 12px;
-          box-sizing: border-box;
-        }
-
-        .reddit-form-input:focus {
-          border-color: #5f99cf;
-          outline: none;
-        }
-
-        .reddit-btn-submit {
-          background-color: #5f99cf;
-          color: white;
-          border: 1px solid #3f79af;
-          padding: 6px 12px;
-          font-weight: bold;
-          font-size: 11px;
-          cursor: pointer;
-          border-radius: 3px;
-        }
-
-        .reddit-btn-submit:hover {
-          background-color: #3f79af;
-        }
-
-        .reddit-btn-submit:disabled {
-          background-color: #ccc;
-          border-color: #bbb;
-          cursor: not-allowed;
-        }
-
-        .reddit-btn-reset {
-          background-color: #f0f0f0;
-          color: #333;
-          border: 1px solid #ccc;
-          padding: 6px 12px;
-          font-weight: bold;
-          font-size: 11px;
-          cursor: pointer;
-          border-radius: 3px;
-          margin-left: 8px;
-        }
-
-        .reddit-btn-reset:hover {
-          background-color: #e0e0e0;
-          border-color: #bbb;
-        }
-
-        .reddit-flair {
-          padding: 1px 4px;
-          font-size: 9px;
-          border-radius: 2px;
-          font-weight: normal;
-          display: inline-block;
-          margin-left: 4px;
-          text-transform: uppercase;
-        }
-
-        .reddit-flair-upgraded {
-          background-color: #e8f4fd;
-          color: #1da1f2;
-          border: 1px solid #b3d9ff;
-        }
-
-        .reddit-flair-great {
-          background-color: #d4edda;
-          color: #155724;
-          border: 1px solid #c3e6cb;
-        }
-
-        .reddit-flair-fair {
-          background-color: #fff3cd;
-          color: #856404;
-          border: 1px solid #ffeeba;
-        }
-
-        .reddit-flair-pass {
-          background-color: #e2e3e5;
-          color: #383d41;
-          border: 1px solid #d6d8db;
-        }
-
-        .reddit-flair-avoid {
-          background-color: #f8d7da;
-          color: #721c24;
-          border: 1px solid #f5c6cb;
-        }
-
-        .reddit-sticky-comment {
-          background-color: #f9fff9;
-          border-left: 2px solid #5fcf5f !important;
-          padding: 10px 12px;
-          border: 1px solid #dbeddb;
-          border-radius: 4px;
-          margin-bottom: 15px;
-        }
-
-        .reddit-mod-tag {
-          color: #228822;
-          font-weight: bold;
-          margin-left: 4px;
-        }
-
-        .reddit-skeleton {
-          background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-          background-size: 200% 100%;
-          animation: loading-pulse 1.5s infinite;
-          border-radius: 4px;
-        }
-
-        @keyframes loading-pulse {
-          0% { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
-        }
-
-        .reddit-side-metrics-table {
-          width: 100%;
-          border-collapse: collapse;
-          margin-top: 5px;
-        }
-
-        .reddit-side-metrics-table td {
-          padding: 6px 0;
-          border-bottom: 1px solid #eef2f7;
-          font-size: 11px;
-        }
-
-        .reddit-side-metrics-table td:first-child {
-          color: #666;
-          font-weight: bold;
-        }
-
-        .reddit-side-metrics-table td:last-child {
-          text-align: right;
-          font-weight: bold;
-          color: #222;
+        .rules-list li {
+          margin-bottom: 6px;
         }
       `}</style>
 
-      {/* ── Top Bar ────────────────────────────────────────────────── */}
-      <div className="reddit-top-bar">
-        <div className="reddit-sr-list">
-          <Link href="/all">MY SUBREDDITS</Link> ▼ | <Link href="/all">POPULAR</Link> | <Link href="/all">ALL</Link> | <Link href="/all">RANDOM</Link> | <Link href="/all">BIKE_FLIP</Link> | <strong>VELOSTACK_ANALYZER</strong>
-        </div>
-        <div>
-          want to join? <Link href="/" style={{ color: "#369", textDecoration: "underline" }}>Login or register</Link> in seconds. | English
-        </div>
-      </div>
-
-      {/* ── Subreddit Header ───────────────────────────────────────── */}
-      <div className="reddit-header">
-        <div className="reddit-header-logo-container">
-          <Link href="/all" className="reddit-logo-text">VeloStack</Link>
-          <span className="reddit-sub-title">/r/velostack_analyzer</span>
-        </div>
-        <div className="reddit-tabs">
-          <Link href="/all" className="reddit-tab">all phases</Link>
-          <span className={`reddit-tab active`}>analyzer</span>
-          <Link href="/tracker" className="reddit-tab">tracker</Link>
-          <Link href="/extractor" className="reddit-tab">extractor</Link>
-          <Link href="/mechanic" className="reddit-tab">mechanic</Link>
-          <Link href="/ledger" className="reddit-tab">ledger</Link>
+      {/* ── Cohesive Header ───────────────────────────────────────── */}
+      <div className="analyzer-nav">
+        <Link href="/all" className="analyzer-logo">
+          🚲 VeloStack
+        </Link>
+        <div className="analyzer-nav-links">
+          <Link href="/all" className="analyzer-nav-link">Directory</Link>
+          <Link href="/analyzer" className="analyzer-nav-link active">Analyzer</Link>
+          <Link href="/tracker" className="analyzer-nav-link">Tracker</Link>
+          <Link href="/extractor" className="analyzer-nav-link">Extractor</Link>
+          <Link href="/mechanic" className="analyzer-nav-link">Mechanic</Link>
+          <Link href="/ledger" className="analyzer-nav-link">Ledger</Link>
         </div>
       </div>
 
-      {/* ── Main Layout ────────────────────────────────────────────── */}
-      <div className="reddit-main">
-        {/* ── Left Content Pane ────────────────────────────────────── */}
-        <div className="reddit-content">
-          
-          {/* SKELETON / LOADING STATE */}
-          {loading && (
-            <div>
-              <div className="reddit-post" style={{ border: "1px solid #e0e0e0", padding: "15px" }}>
-                <div className="reddit-post-voting">
-                  <div style={{ fontSize: 18 }}>▲</div>
-                  <div style={{ margin: "4px 0" }}>••</div>
-                  <div style={{ fontSize: 18 }}>▼</div>
-                </div>
-                <div className="reddit-post-body">
-                  <div className="reddit-skeleton" style={{ height: 20, width: "60%", marginBottom: 8 }} />
-                  <div className="reddit-skeleton" style={{ height: 12, width: "30%", marginBottom: 15 }} />
-                  <div className="reddit-skeleton" style={{ height: 100, width: "100%", marginBottom: 10 }} />
-                </div>
-              </div>
-              <div className="reddit-sticky-comment">
-                <div className="reddit-comment-meta">
-                  <div className="reddit-skeleton" style={{ height: 12, width: "150px" }} />
-                </div>
-                <div className="reddit-skeleton" style={{ height: 60, width: "90%", marginTop: 8 }} />
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 15, marginTop: 20 }}>
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="reddit-comment" style={{ marginLeft: 0, paddingLeft: 10 }}>
-                    <div className="reddit-skeleton" style={{ height: 12, width: "120px", marginBottom: 6 }} />
-                    <div className="reddit-skeleton" style={{ height: 24, width: "50%" }} />
-                  </div>
-                ))}
-              </div>
+      {/* ── Main Layout Container ──────────────────────────────────── */}
+      <div className="analyzer-container">
+        
+        {/* SKELETON / LOADER HUD */}
+        {loading && (
+          <div className="modern-card">
+            <div className="loader-overlay">
+              <div className="spinner" />
+              <div className="loading-title">Analyzing Classified Listing</div>
+              <div className="loading-desc">Extracting specifications, evaluating components, and scraping completed sales...</div>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* SUBMISSION FORM VIEW (If NO Result and Not Loading) */}
-          {!result && !loading && (
-            <div>
-              <h2 style={{ fontSize: "18px", color: "#336699", borderBottom: "1px solid #5f99cf", paddingBottom: "5px", marginBottom: "15px", fontWeight: "normal" }}>
-                Submit to VeloStack Analyzer
-              </h2>
-              
-              <div style={{ display: "flex", gap: "2px", marginBottom: "-1px" }}>
-                <span className="reddit-tab active" style={{ borderRadius: "4px 4px 0 0", border: "1px solid #ccc", borderBottom: "1px solid #ffffff", padding: "6px 16px" }}>
-                  TEXT POST
-                </span>
-                <span className="reddit-tab" style={{ borderRadius: "4px 4px 0 0", border: "1px solid #eee", opacity: 0.4, cursor: "not-allowed", padding: "6px 16px" }}>
-                  LINK
-                </span>
+        {/* SUBMISSION FORM VIEW (If NO Result and Not Loading) */}
+        {!result && !loading && (
+          <div className="analyzer-grid" style={{ gridTemplateColumns: "1fr" }}>
+            <div className="modern-card">
+              <div className="modern-card-title">
+                ✨ VeloStack Classified Listing Analyzer & KBB Index
               </div>
-
-              <form onSubmit={handleSubmit} className="reddit-form">
-                <div className="reddit-form-group">
-                  <label className="reddit-form-label">title</label>
+              
+              <form onSubmit={handleSubmit}>
+                <div className="form-group">
+                  <label className="form-label">Ad Title</label>
                   <input
-                    className="reddit-form-input"
+                    className="modern-input"
                     type="text"
-                    placeholder='e.g. "Trek FX3 2019, 28 Zoll"'
+                    placeholder='e.g. "Trek FX 3 Hybrid Bike 2021"'
                     value={form.title}
-                    onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                    onChange={(e) => saveFormState({ ...form, title: e.target.value })}
                     required
                   />
-                  <span style={{ fontSize: "10px", color: "#888" }}>Provide a clean title for the bike classified listing.</span>
+                  <span className="input-subtext">Provide the exact model and year from the classified listing for precision scraping.</span>
                 </div>
 
-                <div className="reddit-form-group">
-                  <label className="reddit-form-label">text (optional)</label>
+                <div className="form-group">
+                  <label className="form-label">Listing Description (optional)</label>
                   <textarea
-                    className="reddit-form-input"
+                    className="modern-input"
                     rows={8}
                     style={{ resize: "vertical" }}
-                    placeholder="Paste the full classified description here (components, condition, issues)..."
+                    placeholder="Paste the complete description containing components, wear issues, and history..."
                     value={form.description}
-                    onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                    onChange={(e) => saveFormState({ ...form, description: e.target.value })}
                   />
-                  <span style={{ fontSize: "10px", color: "#888" }}>Our AI will parse this description to extract individual components and list issues.</span>
+                  <span className="input-subtext">Our appraiser AI will parse this structure to identify repairs and parts upgrades.</span>
                 </div>
 
-                <div className="reddit-form-group">
-                  <label className="reddit-form-label">asking price (€)</label>
+                <div className="form-group" style={{ maxWidth: 300 }}>
+                  <label className="form-label">Asking Price (€)</label>
                   <input
-                    className="reddit-form-input"
+                    className="modern-input"
                     type="number"
                     min="1"
                     step="1"
-                    placeholder="e.g. 280"
+                    placeholder="e.g. 350"
                     value={form.askingPrice}
-                    onChange={(e) => setForm((f) => ({ ...f, askingPrice: e.target.value }))}
+                    onChange={(e) => saveFormState({ ...form, askingPrice: e.target.value })}
                     required
                   />
-                  <span style={{ fontSize: "10px", color: "#888" }}>Required for ROI and flip calculations.</span>
+                  <span className="input-subtext">Used to calculate target flip margin and clearing percentiles.</span>
                 </div>
 
                 {error && (
-                  <div style={{ border: "1px solid #f5c6cb", backgroundColor: "#f8d7da", color: "#721c24", padding: "10px", borderRadius: "3px", marginBottom: "15px" }}>
+                  <div style={{ border: "1px solid #fecaca", backgroundColor: "#fef2f2", color: "#991b1b", padding: "12px", borderRadius: "8px", marginBottom: "18px", fontSize: "13px" }}>
                     <strong>Error:</strong> {error}
                   </div>
                 )}
 
-                <div style={{ marginTop: "15px" }}>
-                  <button type="submit" className="reddit-btn-submit" disabled={loading}>
-                    {loading ? "analyzing..." : "analyze listing"}
+                <div style={{ marginTop: "24px" }}>
+                  <button type="submit" className="primary-btn" disabled={loading}>
+                    Appraise & Gather Market Data
                   </button>
-                  <button type="button" className="reddit-btn-reset" onClick={handleReset}>
-                    clear fields
+                  <button type="button" className="secondary-btn" onClick={handleReset}>
+                    Clear Fields
                   </button>
                 </div>
               </form>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* POST THREAD VIEW (Once result is loaded and not loading) */}
-          {result && !loading && (
-            <div>
-              {/* Main Post */}
-              <div className="reddit-post">
-                {/* Voting column */}
-                <div className="reddit-post-voting">
-                  <span 
-                    className={`reddit-arrow-up ${userVote === "up" ? "active" : ""}`}
-                    onClick={handleUpvote}
-                  >
-                    ▲
-                  </span>
-                  <span style={{ color: userVote === "up" ? "#ff4500" : userVote === "down" ? "#5f99cf" : "#555", margin: "2px 0" }}>
-                    {upvotes}
-                  </span>
-                  <span 
-                    className={`reddit-arrow-down ${userVote === "down" ? "active" : ""}`}
-                    onClick={handleDownvote}
-                  >
-                    ▼
+        {/* RESULTS THREAD VIEW */}
+        {result && !loading && (
+          <div className="analyzer-grid">
+            
+            {/* Left Content Pane */}
+            <div className="analyzer-left-pane">
+              
+              {/* Appraiser AI Verdict Card */}
+              <div className={`verdict-banner-card ${
+                result.verdict === "GREAT FLIP" ? "verdict-glow-emerald" :
+                result.verdict === "FAIR DEAL" ? "verdict-glow-amber" :
+                "verdict-glow-red"
+              }`}>
+                <div className="verdict-header-row">
+                  <h1 className="verdict-headline">{form.title}</h1>
+                  <span className={`verdict-badge ${
+                    result.verdict === "GREAT FLIP" ? "badge-great" :
+                    result.verdict === "FAIR DEAL" ? "badge-fair" :
+                    result.verdict === "PASS" ? "badge-pass" :
+                    "badge-avoid"
+                  }`}>
+                    {result.verdict}
                   </span>
                 </div>
+                
+                <p className="verdict-reason">
+                  <strong>AI Appraiser Valuation:</strong> {result.verdictReason}
+                </p>
 
-                {/* Post Contents */}
-                <div className="reddit-post-body">
-                  <h1 className="reddit-post-title" style={{ textDecoration: "none", color: "#000", fontWeight: "bold" }}>
-                    {form.title} — Listing Price: €{form.askingPrice}
-                    {result.verdict === "GREAT FLIP" && <span className="reddit-flair reddit-flair-great">great flip</span>}
-                    {result.verdict === "FAIR DEAL" && <span className="reddit-flair reddit-flair-fair">fair deal</span>}
-                    {result.verdict === "PASS" && <span className="reddit-flair reddit-flair-pass">pass</span>}
-                    {result.verdict === "AVOID" && <span className="reddit-flair reddit-flair-avoid">avoid</span>}
-                  </h1>
-                  <div className="reddit-post-meta">
-                    submitted 3 minutes ago by <a href="#user">bike_flipper_pro</a> to <Link href="/analyzer">/r/velostack_analyzer</Link>
-                  </div>
-
-                  {form.description ? (
-                    <div className="reddit-post-text">
-                      {form.description}
+                {result.detectedIssues && result.detectedIssues.length > 0 ? (
+                  <div className="repairs-box">
+                    <div className="repairs-title">
+                      🔧 Required Mechanical Repairs
                     </div>
-                  ) : (
-                    <div className="reddit-post-text" style={{ fontStyle: "italic", color: "#888" }}>
-                      No listing description provided.
-                    </div>
-                  )}
-
-                  <div className="reddit-post-footer">
-                    <span><strong>12 comments</strong></span>
-                    <span>share</span>
-                    <span>save</span>
-                    <span>hide</span>
-                    <span>delete</span>
-                    <span>nsfw</span>
-                    <span>spoiler</span>
-                    <span>crosspost</span>
+                    <ul className="repairs-list">
+                      {result.detectedIssues.map((issue, idx) => (
+                        <li key={idx}>
+                          <strong>{issue.part}</strong>: {issue.issue} (Estimated parts cost: <strong>€{issue.estimatedCost}</strong>)
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                </div>
+                ) : (
+                  <div className="repairs-box" style={{ borderColor: "#d1fae5", borderTopStyle: "solid" }}>
+                    <div className="repairs-title" style={{ color: "#10b981" }}>
+                      ✔ Clean Bill of Health
+                    </div>
+                    <p style={{ margin: 0, fontSize: "12px", color: "#475569" }}>
+                      No active mechanical damages or worn drivetrain components were parsed in the text description.
+                    </p>
+                  </div>
+                )}
               </div>
 
-              {/* Sticky Moderator AI Verdict Comment */}
-              <div className="reddit-sticky-comment">
-                <div className="reddit-comment-meta">
-                  <span className="reddit-comment-meta-user">AutoModerator</span>
-                  <span className="reddit-mod-tag">[M]</span>{" "}
-                  <span style={{ color: "#888" }}>[score hidden] 3 minutes ago</span>{" "}
-                  <span style={{ color: "#228822", fontWeight: "bold" }}>stickied comment</span>
-                </div>
-                <div className="reddit-comment-body">
-                  <p style={{ margin: "4px 0 8px 0", fontSize: "13px", lineHeight: "1.5" }}>
-                    <strong>AI AGENT VERDICT:</strong>{" "}
-                    <span 
-                      style={{ 
-                        fontWeight: "bold", 
-                        color: result.verdict === "GREAT FLIP" ? "#2ecc71" : result.verdict === "FAIR DEAL" ? "#f39c12" : "#e74c3c" 
-                      }}
-                    >
-                      {result.verdict}
-                    </span>
-                    <br />
-                    {result.verdictReason}
+              {/* Scraped Transactions Sub-Ledger */}
+              {marketData && (
+                <div className="modern-card">
+                  <div className="modern-card-title">
+                    📈 Empirical Completed Sales Data (eBay & Pinkbike)
+                  </div>
+                  <p style={{ fontSize: "12px", color: "#64748b", margin: "-6px 0 14px 0" }}>
+                    Showing {marketData.sampleSize} cleared transaction matches harvested in real-time.
                   </p>
-
-                  {result.detectedIssues && result.detectedIssues.length > 0 ? (
-                    <div style={{ marginTop: 10, borderTop: "1px dashed #cee3f8", paddingTop: 8 }}>
-                      <strong style={{ color: "#c0392b" }}>🔧 Detected Repairs Required:</strong>
-                      <ul style={{ margin: "6px 0 0 0", paddingLeft: 20, fontSize: "11px", lineHeight: 1.4 }}>
-                        {result.detectedIssues.map((issue, idx) => (
-                          <li key={idx} style={{ marginBottom: 4 }}>
-                            <strong>{issue.part}</strong>: {issue.issue} (Estimated: <strong>€{issue.estimatedCost}</strong>)
-                          </li>
+                  
+                  <div className="scraped-table-container">
+                    <table className="scraped-table">
+                      <thead>
+                        <tr>
+                          <th>Platform</th>
+                          <th>Completed Listing Item</th>
+                          <th>Condition</th>
+                          <th>Sale Date</th>
+                          <th style={{ textAlign: "right" }}>Cleared Value</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {marketData.transactions.map((tx, idx) => (
+                          <tr key={idx}>
+                            <td>
+                              <span className={`platform-badge ${
+                                tx.platform.toLowerCase() === "ebay" ? "platform-ebay" :
+                                tx.platform.toLowerCase() === "pinkbike" ? "platform-pinkbike" :
+                                "platform-other"
+                              }`}>
+                                {tx.platform}
+                              </span>
+                            </td>
+                            <td style={{ fontWeight: 500, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={tx.title}>
+                              {tx.title}
+                            </td>
+                            <td>
+                              <span style={{ fontSize: "11px", color: "#475569" }}>{tx.condition}</span>
+                            </td>
+                            <td>
+                              <span style={{ fontSize: "11px", color: "#64748b" }}>{tx.date}</span>
+                            </td>
+                            <td style={{ textAlign: "right", fontWeight: 700, color: "#0f172a" }}>
+                              €{Math.round(tx.price)}
+                            </td>
+                          </tr>
                         ))}
-                      </ul>
-                    </div>
-                  ) : (
-                    <div style={{ marginTop: 8, color: "#27ae60", fontSize: "11px" }}>
-                      ✔ No mechanical issues were explicitly detected in the description.
-                    </div>
-                  )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-                <div className="reddit-comment-footer" style={{ marginTop: 8 }}>
-                  <span style={{ color: "#369" }}>permalink</span>
-                  <span style={{ color: "#369" }}>parent</span>
-                  <span style={{ color: "#369" }}>source</span>
-                  <span style={{ color: "#369" }}>reply</span>
-                </div>
-              </div>
+              )}
 
-              {/* Component Comments section */}
-              <div className="reddit-comment-section">
-                <div className="reddit-comments-title">
-                  all 7 comments
-                  <span style={{ fontSize: "10px", color: "#888", fontWeight: "normal", marginLeft: 10 }}>
-                    sorted by: <strong>best</strong>
-                  </span>
+              {/* Component breakdown Upgrade Directory */}
+              <div className="modern-card">
+                <div className="modern-card-title">
+                  🛠 Component Appraisal & Upgrade Simulator
                 </div>
-
-                <div style={{ paddingLeft: 5 }}>
+                <p style={{ fontSize: "12px", color: "#64748b", margin: "-6px 0 16px 0" }}>
+                  Adjust component tiers on-the-fly to calculate how upgrades impact investment ROI and estimated resale returns.
+                </p>
+                
+                <div className="components-grid">
                   {componentTypes.map(({ type, label }) => {
                     const originalComp = localComponents.find(c => c.type.toLowerCase().includes(type.toLowerCase()));
                     const upgradedInfo = upgrades[type.toLowerCase()];
 
                     return (
-                      <CommentNode
+                      <ComponentCard
                         key={type}
                         label={label}
                         type={type}
@@ -963,114 +1075,140 @@ export default function AnalyzerPage() {
                   })}
                 </div>
               </div>
-            </div>
-          )}
-        </div>
 
-        {/* ── Right Sidebar Pane ────────────────────────────────────── */}
-        <div className="reddit-sidebar">
-          {/* SEARCH BOX */}
-          <div className="reddit-sidebox" style={{ padding: "8px 12px" }}>
-            <div style={{ display: "flex", gap: "4px" }}>
-              <input
-                type="text"
-                className="reddit-form-input"
-                placeholder="search"
-                style={{ padding: "4px 8px", fontSize: "11px" }}
-                disabled
-              />
-              <button className="reddit-btn-submit" style={{ padding: "4px 8px" }} disabled>🔍</button>
             </div>
-          </div>
 
-          {/* SUBMIT BUTTONS / RESET */}
-          {result && (
-            <button 
-              className="reddit-btn-submit" 
-              onClick={handleReset}
-              style={{ width: "100%", padding: "10px", fontSize: "13px", backgroundColor: "#ff4500", borderColor: "#e03d00" }}
-            >
-              Submit a New Text Post
-            </button>
-          )}
-
-          {/* SUBREDDIT INFO */}
-          <div className="reddit-sidebox">
-            <div style={{ fontSize: "15px", fontWeight: "bold", marginBottom: "4px" }}>velostack_analyzer</div>
-            <div style={{ fontSize: "10px", color: "#888", marginBottom: "8px" }}>
-              <span style={{ color: "#222", fontWeight: "bold" }}>12,402</span> readers | <span style={{ color: "green", fontWeight: "bold" }}>54</span> users here now
-            </div>
-            
-            <div style={{ borderTop: "1px solid #cee3f8", paddingTop: "8px", fontSize: "11px", lineHeight: "1.4", color: "#555" }}>
-              The premier subreddit for extracting components, pricing, and diagnosing used bicycle classified listings in real-time.
-            </div>
-          </div>
-
-          {/* VELOSTACK EVALUATION METRICS PANEL */}
-          {result && (
-            <div className="reddit-sidebox" style={{ borderColor: "#c3e6cb", backgroundColor: "#f9fff9" }}>
-              <div className="reddit-sidebox-title" style={{ color: "#2e7d32", borderBottomColor: "#c3e6cb" }}>
-                BIKE EVALUATION METRICS
-              </div>
+            {/* Right Sidebar Pane */}
+            <div className="analyzer-right-pane">
               
-              <table className="reddit-side-metrics-table">
-                <tbody>
-                  <tr>
-                    <td>Dynamic Profit</td>
-                    <td style={{ color: profitColor, fontSize: "13px" }}>
-                      €{Math.round(dynamicProfit)}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Est. Resale Value</td>
-                    <td>€{Math.round(dynamicResaleValue)}</td>
-                  </tr>
-                  <tr>
-                    <td>Total Investment</td>
-                    <td>
-                      €{Math.round(upgradedInvestment)}
-                      <div style={{ fontSize: "9px", color: "#888", fontWeight: "normal" }}>
-                        Base €{form.askingPrice} + Parts €{Math.round(upgradesTotal)}
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>AI Confidence</td>
-                    <td>
-                      {Math.round(result.confidence * 100)}%
-                      <div style={{ fontSize: "9px", color: result.confidence > 0.6 ? "#27ae60" : "#d35400", fontWeight: "normal" }}>
-                        {result.confidence > 0.6 ? "Strong Market Data" : "Weak Market Data"}
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Bike Tier</td>
-                    <td style={{ textTransform: "capitalize" }}>
-                      {result.bikeTier ? `${result.bikeTier.brand} ${result.bikeTier.type} (${result.bikeTier.tier})` : "Generic"}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Price vs Market</td>
-                    <td style={{ textTransform: "capitalize", color: result.priceVsMarket === "below" ? "#27ae60" : result.priceVsMarket === "above" ? "#c0392b" : "#7f8c8d" }}>
-                      {result.priceVsMarket}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          )}
+              {/* Reset Submit button */}
+              <button 
+                className="primary-btn" 
+                onClick={handleReset}
+                style={{ width: "100%", padding: "12px", fontSize: "14px", background: "#ef4444", marginBottom: "20px", display: "block" }}
+              >
+                Appraise Another Listing
+              </button>
 
-          {/* SUBREDDIT RULES */}
-          <div className="reddit-sidebox">
-            <div className="reddit-sidebox-title">SUBREDDIT RULES</div>
-            <ol style={{ margin: 0, paddingLeft: 15, fontSize: "10px", lineHeight: "1.4", color: "#555" }}>
-              <li style={{ marginBottom: 4 }}>Do not post stolen or illegal bicycles.</li>
-              <li style={{ marginBottom: 4 }}>Always specify asking price in EUR (€).</li>
-              <li style={{ marginBottom: 4 }}>AI appraisals are estimates, not financial advice.</li>
-              <li style={{ marginBottom: 4 }}>Verify frame serial numbers before purchase.</li>
-            </ol>
+              {/* Valuation stats grid */}
+              <div className="modern-card">
+                <div className="modern-card-title">
+                  📊 Investment Statistics
+                </div>
+                <table className="metrics-table">
+                  <tbody>
+                    <tr>
+                      <td className="label">Dynamic Profit</td>
+                      <td className="value" style={{ color: profitColor, fontSize: "16px" }}>
+                        €{Math.round(dynamicProfit)}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="label">Resale Estimate</td>
+                      <td className="value">€{Math.round(dynamicResaleValue)}</td>
+                    </tr>
+                    <tr>
+                      <td className="label">Total Investment</td>
+                      <td className="value">
+                        €{Math.round(upgradedInvestment)}
+                        <div style={{ fontSize: "9px", color: "#64748b", fontWeight: "normal", marginTop: 2 }}>
+                          Base €{form.askingPrice} + Repairs €{Math.round(baseRepairCost)} + Upgrades €{Math.round(upgradesTotal)}
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="label">Appraiser Confidence</td>
+                      <td className="value">
+                        {Math.round(result.confidence * 100)}%
+                        <div style={{ fontSize: "9px", color: result.confidence > 0.6 ? "#10b981" : "#ef4444", fontWeight: "normal", marginTop: 2 }}>
+                          {result.confidence > 0.6 ? "Excellent Data Coverage" : "Valuation estimate volatile"}
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="label">Clearing Bracket</td>
+                      <td className="value" style={{ textTransform: "capitalize" }}>
+                        {result.bikeTier ? `${result.bikeTier.brand} (${result.bikeTier.tier})` : "Generic"}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="label">Pricing Sentiment</td>
+                      <td className="value" style={{ 
+                        textTransform: "capitalize", 
+                        color: result.priceVsMarket === "below" ? "#10b981" : result.priceVsMarket === "above" ? "#ef4444" : "#64748b" 
+                      }}>
+                        {result.priceVsMarket} market value
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* KBB Empirical Index Card */}
+              {marketData && (
+                <div className="modern-card">
+                  <div className="modern-card-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span>📖 Kelley Blue Book Index</span>
+                    <span className={`confidence-badge ${
+                      marketData.confidence === "high" ? "confidence-high" :
+                      marketData.confidence === "medium" ? "confidence-medium" :
+                      "confidence-low"
+                    }`}>
+                      {marketData.confidence} Vol
+                    </span>
+                  </div>
+
+                  <div className="kbb-percentile-grid">
+                    <div className="kbb-percentile-card">
+                      <div className="kbb-percentile-label">Bargain</div>
+                      <div className="kbb-percentile-value">€{marketData.bargainPrice}</div>
+                    </div>
+                    <div className="kbb-percentile-card">
+                      <div className="kbb-percentile-value" style={{ color: "#3b82f6" }}>€{marketData.medianPrice}</div>
+                      <div className="kbb-percentile-label" style={{ fontSize: "8px", marginTop: 2 }}>Median</div>
+                    </div>
+                    <div className="kbb-percentile-card">
+                      <div className="kbb-percentile-label">Top Tier</div>
+                      <div className="kbb-percentile-value">€{marketData.topPrice}</div>
+                    </div>
+                  </div>
+
+                  {/* clearing meter gauge */}
+                  <div className="clearing-meter-container">
+                    <div className="clearing-meter-labels">
+                      <span className="meter-label-left">Bargain</span>
+                      <span className="meter-label-center">Fair clearing</span>
+                      <span className="meter-label-right">Overpriced</span>
+                    </div>
+                    <div className="clearing-meter-bar">
+                      <div 
+                        className="clearing-meter-pointer" 
+                        style={{ left: `${clearingMeterPercent}%` }} 
+                        title={`Asking Price: €${askingPriceNum}`}
+                      />
+                    </div>
+                    <div style={{ textAlign: "center", fontSize: "11px", fontWeight: "700", color: zoneColor, marginTop: 12 }}>
+                      Asking price is in the {priceZone} zone
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Rules block */}
+              <div className="modern-card">
+                <div className="modern-card-title">Appraiser Rules</div>
+                <ol className="rules-list">
+                  <li>Estimations are generated from scraped empirical classified listings.</li>
+                  <li>Hourly return parameters simulate manual repair rates.</li>
+                  <li>Check local component sizes (frame, bottom bracket spacing) before purchasing spares.</li>
+                </ol>
+              </div>
+
+            </div>
+
           </div>
-        </div>
+        )}
+
       </div>
     </main>
   );
