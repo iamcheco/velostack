@@ -712,6 +712,9 @@ function LedgerContent() {
             mechanic
           </Link>
           <span className="ledger-nav-link active">ledger</span>
+          <Link href="/settings" className="ledger-nav-link">
+            sniper
+          </Link>
         </nav>
       </header>
 

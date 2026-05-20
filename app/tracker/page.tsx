@@ -293,6 +293,9 @@ function TrackerContent() {
           <Link href="/ledger" className="tracker-nav-link">
             ledger
           </Link>
+          <Link href="/settings" className="tracker-nav-link">
+            sniper
+          </Link>
         </nav>
       </header>
 

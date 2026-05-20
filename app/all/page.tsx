@@ -16,6 +16,8 @@ export default function DirectoryPage() {
         <Link href="/mechanic" style={{ color: "#0000ff", textDecoration: "underline" }}>mechanic</Link>
         <span style={{ color: "#888" }}>|</span>
         <Link href="/ledger" style={{ color: "#0000ff", textDecoration: "underline" }}>ledger</Link>
+        <span style={{ color: "#888" }}>|</span>
+        <Link href="/settings" style={{ color: "#0000ff", textDecoration: "underline" }}>settings</Link>
       </header>
 
       <div style={{ padding: "15px" }}>
@@ -62,6 +64,12 @@ export default function DirectoryPage() {
               <td style={{ padding: "8px", border: "1px solid #ccc" }}>Phase 5</td>
               <td style={{ padding: "8px", border: "1px solid #ccc" }}><Link href="/ledger" style={{ color: "#0000ff", textDecoration: "underline" }}>P&L Flip Ledger</Link></td>
               <td style={{ padding: "8px", border: "1px solid #ccc" }}>Track transaction purchase prices, parts expenses, custom labor yields, and realized profit margins.</td>
+            </tr>
+            <tr>
+              <td style={{ padding: "8px", border: "1px solid #ccc", fontWeight: "bold", color: "green" }}>LIVE</td>
+              <td style={{ padding: "8px", border: "1px solid #ccc" }}>Phase 6</td>
+              <td style={{ padding: "8px", border: "1px solid #ccc" }}><Link href="/settings" style={{ color: "#0000ff", textDecoration: "underline" }}>AI Background Deal Sniper</Link></td>
+              <td style={{ padding: "8px", border: "1px solid #ccc" }}>Configure automated background scanners matching brand/radius criteria, checking duplicate caches, and triggering real-time SMS deal notifications.</td>
             </tr>
           </tbody>
         </table>

@@ -546,6 +546,9 @@ export default function ExtractorPage() {
           <Link href="/ledger" className="modern-nav-link">
             ledger
           </Link>
+          <Link href="/settings" className="modern-nav-link">
+            sniper
+          </Link>
         </nav>
       </header>
 

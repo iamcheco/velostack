@@ -656,6 +656,9 @@ export default function MechanicPage() {
           <Link href="/ledger" className="mechanic-nav-link">
             ledger
           </Link>
+          <Link href="/settings" className="mechanic-nav-link">
+            sniper
+          </Link>
         </nav>
       </header>
 

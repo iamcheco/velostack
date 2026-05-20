@@ -908,6 +908,7 @@ export default function AnalyzerPage() {
           <Link href="/extractor" className="analyzer-nav-link">Extractor</Link>
           <Link href="/mechanic" className="analyzer-nav-link">Mechanic</Link>
           <Link href="/ledger" className="analyzer-nav-link">Ledger</Link>
+          <Link href="/settings" className="analyzer-nav-link">Sniper</Link>
         </div>
       </div>
 
