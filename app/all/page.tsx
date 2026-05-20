@@ -50,10 +50,10 @@ export default function DirectoryPage() {
               <td style={{ padding: "8px", border: "1px solid #ccc" }}>Paste a repair video URL and get an interactive step-by-step checklist with tools and time estimate.</td>
             </tr>
             <tr>
-              <td style={{ padding: "8px", border: "1px solid #ccc", color: "#888" }}>COMING SOON</td>
+              <td style={{ padding: "8px", border: "1px solid #ccc", fontWeight: "bold", color: "green" }}>LIVE</td>
               <td style={{ padding: "8px", border: "1px solid #ccc" }}>Phase 4</td>
-              <td style={{ padding: "8px", border: "1px solid #ccc", color: "#0000ff", textDecoration: "underline" }}>Pocket Bike Mechanic AI</td>
-              <td style={{ padding: "8px", border: "1px solid #ccc" }}>Upload a photo of any bike issue. OpenCV preprocessing + AI vision gives you a diagnosis and repair steps.</td>
+              <td style={{ padding: "8px", border: "1px solid #ccc" }}><Link href="/mechanic" style={{ color: "#0000ff", textDecoration: "underline" }}>Pocket Bike Mechanic AI</Link></td>
+              <td style={{ padding: "8px", border: "1px solid #ccc" }}>Upload a photo of any bike issue. Real client-side OpenCV.js Canny edge detection, ONNX Web YOLO inference, and scale calibration measurements. <b>(Created by Vedansh)</b></td>
             </tr>
           </tbody>
         </table>

@@ -20,12 +20,12 @@
 
 ## 2. Phase Status (source of truth)
 
-| Phase | Name | Route | Status |
-|-------|------|-------|--------|
-| 1 | Fix & Flip Analyzer | `/analyzer` | ✅ LIVE |
-| 2 | Parts Wear Tracker | `/tracker` | ✅ LIVE |
-| 3 | YouTube Skill Extractor | `/extractor` | ✅ LIVE |
-| 4 | Pocket Bike Mechanic AI | `/mechanic` | 🔲 NOT STARTED |
+| Phase | Name | Route | Status | Author |
+|-------|------|-------|--------|--------|
+| 1 | Fix & Flip Analyzer | `/analyzer` | ✅ LIVE | VeloStack Team |
+| 2 | Parts Wear Tracker | `/tracker` | ✅ LIVE | VeloStack Team |
+| 3 | YouTube Skill Extractor | `/extractor` | ✅ LIVE | VeloStack Team |
+| 4 | Pocket Bike Mechanic AI | `/mechanic` | ✅ LIVE | Vedansh |
 
 **Update this table immediately when you complete or start a phase.**
 
@@ -71,17 +71,18 @@ components/
 
 ## 4. Design System Rules (NEVER break these)
 
-- **Font**: `Verdana, Arial, Helvetica, sans-serif` everywhere. No exceptions.
-- **Header background**: `#cee3f8` (Reddit blue-grey)
-- **Header border**: `1px solid #5f99cf`
-- **Active tab**: `color: #ff4500` (Reddit orange), white background, white bottom border
-- **All Reddit CSS is embedded inline** inside each page's `<style jsx global>` block — do NOT move to globals.css
-- **No Tailwind.** Pure CSS only.
+- **Font**: Premium modern typography like `Plus Jakarta Sans`, `Inter`, `Outfit`, or system-ui (e.g., `system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`).
+- **Header style**: Clean minimalist white or light background (`#ffffff` or `#f8fafc`), with a very thin, elegant bottom border (`1px solid rgba(0,0,0,0.06)` or `#e2e8f0`).
+- **Navigation tabs**: Sleek, modern, and pill-shaped or bottom-indicator active states (no old-school Reddit borders/colors unless specified for legacy pages).
+- **Page backgrounds**: Clean modern white or very light off-white background (`#ffffff` or `#f8fafc`) with elegant subtle gradients, soft shadows, and high contrast typography.
+- **CSS**: Pure vanilla CSS or CSS variables inside `<style jsx global>`. No Tailwind.
 - **Phase nav tabs** in every page header must link to real routes:
   - `all phases` → `/all`
   - `analyzer` → `/analyzer`
   - `tracker` → `/tracker`
-  - Current page tab = active (orange), no link, just a `<span>`
+  - `extractor` → `/extractor`
+  - `mechanic` → `/mechanic`
+  - Current page tab = active, with appropriate modern visual indicators.
 
 ---
 
@@ -219,7 +220,7 @@ Before declaring any task complete, verify ALL of the following:
 - [ ] `CURRENT_TASK.md` is updated to reflect what was done and what's next
 - [ ] No secrets or API keys appear in any committed file
 - [ ] New files are added to the File Map in `AGENTS.md` Section 3
-- [ ] The UI matches the Reddit design system (Verdana, `#cee3f8` header, orange active tab)
+- [ ] The UI matches the design system (modern clean white-background style or legacy style as appropriate)
 
 ---
 
