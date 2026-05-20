@@ -93,12 +93,41 @@ export interface WearResult {
 
 export interface PartsBinItem {
   id: string;
-  componentType: PartType | "saddle" | "grip"; // Maps to core parts plus custom accessories
+  componentType: PartType | "saddle" | "grip" | "shifter" | "bottom_bracket" | "wheelset" | "rotor" | "tire"; // Maps to core parts plus custom accessories
   brandModel: string;
   condition: "new" | "excellent" | "fair" | "worn";
   compatSpeeds?: number;
   estimatedValueEur: number;
   dateAdded: string;
+}
+
+export interface BikeFrameSpecs {
+  bottomBracketShell: "BSA" | "BB30" | "BB86/92" | "T47";
+  rearAxle: "135mm QR" | "12x142mm TA" | "12x148mm Boost";
+  brakeMount: "Rim" | "Flat Mount" | "Post Mount";
+  maxTireClearance: number; // in mm
+  wheelSize: "700c" | "650b" | "29 inch" | "27.5 inch" | "26 inch";
+  targetSpeeds: number;     // e.g. 10, 11, 12
+}
+
+export interface MountedPartsState {
+  frameId: string;
+  chain?: string;        // parts bin item id
+  cassette?: string;     // parts bin item id
+  shifter?: string;      // parts bin item id (drivetrain)
+  bottomBracket?: string;// parts bin item id
+  wheelset?: string;     // parts bin item id
+  rotor?: string;        // parts bin item id
+  tire?: string;         // parts bin item id
+  saddle?: string;       // parts bin item id
+}
+
+export interface CompatibilityIssue {
+  id: string;
+  severity: "error" | "warning";
+  component: string;
+  message: string;
+  alternativeQuery?: string; // eBay search suggestion
 }
 
 export interface FlipTransaction {
@@ -124,4 +153,6 @@ export interface TrackerStore {
   explanations: Record<string, string>;   // partKey → cached LLM text
   partsBin?: PartsBinItem[];
   transactions?: FlipTransaction[];
+  bikeFrameSpecs?: Record<string, BikeFrameSpecs>;
+  mountedParts?: Record<string, MountedPartsState>;
 }

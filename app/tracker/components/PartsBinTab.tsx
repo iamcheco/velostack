@@ -4,11 +4,16 @@ import React, { useState } from "react";
 import { useTracker } from "@/app/tracker/context";
 import { PartType, PART_TYPE_LABELS } from "@/lib/tracker-types";
 
-// Extends PartType labels to include custom saddle/grip categories
+// Extends PartType labels to include custom saddle/grip/matchmaker categories
 const ALL_CATEGORY_LABELS: Record<string, string> = {
   ...PART_TYPE_LABELS,
   saddle: "Saddle",
   grip: "Grips & Handlebars",
+  shifter: "Shifter / Cockpit",
+  bottom_bracket: "Bottom Bracket",
+  wheelset: "Wheelset",
+  rotor: "Brake Rotor",
+  tire: "Tire (General/Spare)",
 };
 
 export default function PartsBinTab() {

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import type { TrackerStore, Bike, PartProfile, RideLog, PartReplacement, PartsBinItem, FlipTransaction } from "@/lib/tracker-types";
+import type { TrackerStore, Bike, PartProfile, RideLog, PartReplacement, PartsBinItem, FlipTransaction, BikeFrameSpecs, MountedPartsState } from "@/lib/tracker-types";
 
 // localStorage key
 const STORAGE_KEY = "vst";
@@ -13,6 +13,8 @@ const defaultStore: TrackerStore = {
   replacements: [],
   explanations: {},
   partsBin: [],
+  bikeFrameSpecs: {},
+  mountedParts: {},
 };
 
 const TrackerContext = createContext<{
@@ -26,6 +28,8 @@ const TrackerContext = createContext<{
   addTransaction: (tx: Omit<FlipTransaction, "id">) => void;
   updateTransaction: (id: string, updates: Partial<FlipTransaction>) => void;
   deleteTransaction: (id: string) => void;
+  updateFrameSpecs: (bikeId: string, specs: BikeFrameSpecs) => void;
+  updateMountedParts: (bikeId: string, mounted: MountedPartsState) => void;
 }>({
   store: defaultStore,
   setStore: () => {},
@@ -37,6 +41,8 @@ const TrackerContext = createContext<{
   addTransaction: () => {},
   updateTransaction: () => {},
   deleteTransaction: () => {},
+  updateFrameSpecs: () => {},
+  updateMountedParts: () => {},
 });
 
 export const TrackerProvider = ({ children }: { children: ReactNode }) => {
@@ -47,18 +53,38 @@ export const TrackerProvider = ({ children }: { children: ReactNode }) => {
   // Load from localStorage on mount
   useEffect(() => {
     const raw = localStorage.getItem(STORAGE_KEY);
+    let parsed: TrackerStore = { ...defaultStore };
     if (raw) {
       try {
-        const parsed = JSON.parse(raw) as TrackerStore;
-        // Ensure partsBin is initialized if missing in older schema
+        parsed = JSON.parse(raw) as TrackerStore;
         if (!parsed.partsBin) {
           parsed.partsBin = [];
         }
-        setStore(parsed);
       } catch {
-        // ignore parse errors
+        // ignore
       }
     }
+
+    // Load frame specs and mounted parts
+    const rawSpecs = localStorage.getItem("vst_frame_specs");
+    if (rawSpecs) {
+      try {
+        parsed.bikeFrameSpecs = JSON.parse(rawSpecs);
+      } catch {}
+    } else {
+      parsed.bikeFrameSpecs = {};
+    }
+
+    const rawMounted = localStorage.getItem("vst_mounted_parts");
+    if (rawMounted) {
+      try {
+        parsed.mountedParts = JSON.parse(rawMounted);
+      } catch {}
+    } else {
+      parsed.mountedParts = {};
+    }
+
+    setStore(parsed);
 
     const rawLedger = localStorage.getItem("vst_ledger");
     if (rawLedger) {
@@ -72,7 +98,15 @@ export const TrackerProvider = ({ children }: { children: ReactNode }) => {
 
   // Persist store on any change
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+    const { bikeFrameSpecs, mountedParts, ...rest } = store;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(rest));
+    
+    if (bikeFrameSpecs) {
+      localStorage.setItem("vst_frame_specs", JSON.stringify(bikeFrameSpecs));
+    }
+    if (mountedParts) {
+      localStorage.setItem("vst_mounted_parts", JSON.stringify(mountedParts));
+    }
   }, [store]);
 
   // Persist ledger on any change
@@ -125,6 +159,26 @@ export const TrackerProvider = ({ children }: { children: ReactNode }) => {
     setTransactions((prev) => prev.filter((tx) => tx.id !== id));
   };
 
+  const updateFrameSpecs = (bikeId: string, specs: BikeFrameSpecs) => {
+    setStore((prev) => ({
+      ...prev,
+      bikeFrameSpecs: {
+        ...(prev.bikeFrameSpecs || {}),
+        [bikeId]: specs,
+      },
+    }));
+  };
+
+  const updateMountedParts = (bikeId: string, mounted: MountedPartsState) => {
+    setStore((prev) => ({
+      ...prev,
+      mountedParts: {
+        ...(prev.mountedParts || {}),
+        [bikeId]: mounted,
+      },
+    }));
+  };
+
   return (
     <TrackerContext.Provider
       value={{
@@ -138,6 +192,8 @@ export const TrackerProvider = ({ children }: { children: ReactNode }) => {
         addTransaction,
         updateTransaction,
         deleteTransaction,
+        updateFrameSpecs,
+        updateMountedParts,
       }}
     >
       {children}

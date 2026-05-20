@@ -11,10 +11,11 @@ import PartsBinTab from "@/app/tracker/components/PartsBinTab";
 import ListingGeneratorModal from "@/app/tracker/components/ListingGeneratorModal";
 import { BIKE_TYPE_LABELS } from "@/lib/tracker-types";
 import { getTotalBikeKm } from "@/lib/wear-engine";
+import BuildMatchmaker from "@/app/tracker/components/BuildMatchmaker";
 
 function TrackerContent() {
   const { store, selectedBikeId } = useTracker();
-  const [activeTab, setActiveTab] = useState<"parts" | "ride" | "wear" | "parts_bin">("parts");
+  const [activeTab, setActiveTab] = useState<"parts" | "ride" | "wear" | "parts_bin" | "matchmaker">("parts");
   const [isListingModalOpen, setIsListingModalOpen] = useState(false);
 
   const selectedBike = store.bikes.find(b => b.id === selectedBikeId);
@@ -349,6 +350,12 @@ function TrackerContent() {
               >
                 📥 Garage Parts Bin
               </button>
+              <button
+                className={`tracker-inner-tab ${activeTab === "matchmaker" ? "active" : ""}`}
+                onClick={() => setActiveTab("matchmaker")}
+              >
+                🧬 Franken-Bike Matchmaker
+              </button>
             </div>
 
             {/* Tab Display Router */}
@@ -356,6 +363,7 @@ function TrackerContent() {
             {activeTab === "ride" && <RideLogTab />}
             {activeTab === "wear" && <WearReportTab />}
             {activeTab === "parts_bin" && <PartsBinTab />}
+            {activeTab === "matchmaker" && <BuildMatchmaker />}
           </div>
 
           {/* Right Sidebar Column */}
