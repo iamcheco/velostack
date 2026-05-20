@@ -3,53 +3,7 @@
 import { useState, useEffect } from "react";
 import type { AnalysisResult, ExtractedComponent } from "@/lib/analyzer";
 import Link from "next/link";
-import PartOutDetails from "./components/PartOutDetails";
-
-// ── Types ──────────────────────────────────────────────────────
-interface FormState {
-  title: string;
-  description: string;
-  askingPrice: string;
-  location: string;
-  marketProfile: "urban" | "mountain" | "flatland" | "standard" | "";
-}
-
-// Client-side helper for real-time location archetype hints
-function getClientDetectedProfile(location: string) {
-  if (!location) return null;
-  const loc = location.toLowerCase().trim();
-
-  // ZIP codes
-  const usZipMatch = loc.match(/^\b\d{5}\b/);
-  if (usZipMatch) {
-    const zip = parseInt(usZipMatch[0], 10);
-    const prefix = Math.floor(zip / 100);
-    if (prefix >= 100 && prefix <= 102) return { label: "Urban Commuter Hub", type: "urban", details: "+10% Road/Gravel Resale, -30% Days on Market" };
-    if (prefix >= 320 && prefix <= 349) return { label: "Flat Suburban Sprawl", type: "flatland", details: "-15% Road/Gravel Resale, +50% Days on Market" };
-    if ((prefix >= 800 && prefix <= 816) || (prefix >= 840 && prefix <= 847)) return { label: "Mountain Trail Zone", type: "mountain", details: "+15% MTB Resale, -40% Days on Market" };
-  }
-
-  const deZipMatch = loc.match(/^\b\d{5}\b/);
-  if (deZipMatch) {
-    const zipStr = deZipMatch[0];
-    if (zipStr.startsWith("80") || zipStr.startsWith("81") || zipStr.startsWith("10") || zipStr.startsWith("11") || zipStr.startsWith("12") || zipStr.startsWith("13") || zipStr.startsWith("14")) {
-      return { label: "Urban Commuter Hub", type: "urban", details: "+10% Road/Gravel/City Resale, -30% Days on Market" };
-    }
-    if (zipStr.startsWith("82") || zipStr.startsWith("83")) {
-      return { label: "Mountain Trail Zone", type: "mountain", details: "+15% MTB Resale, -40% Days on Market" };
-    }
-  }
-
-  // Keywords
-  const urbanKeywords = ["london", "munich", "paris", "nyc", "new york", "berlin", "amsterdam", "tokyo", "san francisco", "chicago", "boston", "vienna", "hamburg", "frankfurt"];
-  const mountainKeywords = ["denver", "innsbruck", "vancouver", "chamonix", "salt lake", "utah", "colorado", "alps", "seattle", "portland", "whistler", "calgary", "aspen", "boulder"];
-  const flatlandKeywords = ["florida", "miami", "houston", "dallas", "phoenix", "orlando", "tampa", "charlotte", "netherlands"];
-
-  if (urbanKeywords.some(kw => loc.includes(kw))) return { label: "Urban Commuter Hub", type: "urban", details: "+10% Road/Gravel/City Resale, -30% Days on Market" };
-  if (mountainKeywords.some(kw => loc.includes(kw))) return { label: "Mountain Trail Zone", type: "mountain", details: "+15% MTB Resale, -40% Days on Market" };
-  if (flatlandKeywords.some(kw => loc.includes(kw))) return { label: "Flat Suburban Sprawl", type: "flatland", details: "-15% Road/Gravel Resale, +50% Days on Market" };
-
-  return { label: "Standard Baseline Market", type: "standard", details: "No multipliers, baseline days on market" };
+import PartOutDetails from "./components/PartOutDetails";`n 5eca781ffb80a3ccb308188a9f84955d38eeea87
 }
 
 interface MarketDataResult {
@@ -191,16 +145,7 @@ export default function AnalyzerPage() {
     description: "",
     askingPrice: "",
     location: "",
-    marketProfile: "",
-  });
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [marketData, setMarketData] = useState<MarketDataResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const [localComponents, setLocalComponents] = useState<ExtractedComponent[]>([]);
-  const [upgrades, setUpgrades] = useState<Record<string, { name: string; price: number }>>({});
-  const [appraisalTab, setAppraisalTab] = useState<"whole" | "partout">("whole");
+    marketProfile: "",`n 5eca781ffb80a3ccb308188a9f84955d38eeea87
   
   // Hydrate form from cached session to provide fluid navigation states
   useEffect(() => {
@@ -242,228 +187,14 @@ export default function AnalyzerPage() {
           description: form.description,
           askingPrice: price,
           location: form.location || undefined,
-          marketProfile: form.marketProfile || undefined,
-        }),
-      }).then(res => {
-        if (!res.ok) throw new Error("Analysis failed");
-        return res.json();
-      });
-
-      // 2. Fetch completed listings market data with 7-day client cache
-      const fetchMarketData = async (): Promise<MarketDataResult> => {
-        const cacheKey = form.title.toLowerCase().trim();
-        const localCache = localStorage.getItem("vst_market_data_cache");
-        let cacheObj: Record<string, CacheEntry> = {};
-        
-        if (localCache) {
-          try {
-            cacheObj = JSON.parse(localCache);
-            const entry = cacheObj[cacheKey];
-            const sevenDays = 7 * 24 * 60 * 60 * 1000;
-            if (entry && (Date.now() - entry.timestamp) < sevenDays) {
-              console.log("Serving completed sales market index from 7-day client cache:", cacheKey);
-              return entry.data;
-            }
-          } catch (e) {
-            console.warn("Failed to parse market cache");
-          }
-        }
-
-        // Cache miss: execute scraper call
-        const marketRes = await fetch("/api/market-data", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            query: form.title,
-            category: "bike"
-          })
-        });
-        
-        if (!marketRes.ok) throw new Error("Market data retrieval failed");
-        const data = await marketRes.json();
-        
-        // Save to cache
-        cacheObj[cacheKey] = {
-          timestamp: Date.now(),
-          data
-        };
-        localStorage.setItem("vst_market_data_cache", JSON.stringify(cacheObj));
-        return data;
-      };
-
-      // Run both calls concurrently to maximize load speeds
-      const [analysisResult, marketStats] = await Promise.all([
-        analysisPromise,
-        fetchMarketData().catch(err => {
-          console.warn("Scraper endpoint failed. Falling back gracefully...", err);
-          return null;
-        })
-      ]);
-
-      setResult(analysisResult);
-      setLocalComponents(analysisResult.components || []);
-      setMarketData(marketStats);
-      setUpgrades({});
-    } catch (err: any) {
-      setError(err.message || "Failed to analyze listings. Please check network parameters.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleReset = () => {
-    setForm({ title: "", description: "", askingPrice: "", location: "", marketProfile: "" });
+          marketProfile: form.marketProfile || undefined,`n 5eca781ffb80a3ccb308188a9f84955d38eeea87
     sessionStorage.removeItem("vst_analyzer_form");
     setResult(null);
     setMarketData(null);
     setError(null);
     setLocalComponents([]);
     setUpgrades({});
-    setAppraisalTab("whole");
-  };
-
-  const handleComponentUpgrade = (type: string, newName: string, newPriceEur: number) => {
-    setUpgrades(prev => ({
-      ...prev,
-      [type.toLowerCase()]: { name: newName, price: newPriceEur }
-    }));
-  };
-
-  // Pricing calculations
-  const askingPriceNum = parseFloat(form.askingPrice) || 0;
-  const baseRepairCost = result?.estimatedRepairCost || 0;
-  const baseInvestment = result ? askingPriceNum + baseRepairCost : 0;
-  
-  const upgradesTotal = Object.values(upgrades).reduce((sum, item) => sum + item.price, 0);
-  const upgradedInvestment = baseInvestment + upgradesTotal;
-
-  const currentEstimatedResale = result?.estimatedResalePrice || 0;
-  const dynamicResaleValue = currentEstimatedResale + (upgradesTotal * 0.5);
-  const dynamicProfit = dynamicResaleValue - upgradedInvestment;
-
-  const profitColor = dynamicProfit >= 80 ? "#10b981" : dynamicProfit >= 25 ? "#f59e0b" : "#ef4444";
-
-  // Enforce pricing zone markers based on statistical clearances
-  let clearingMeterPercent = 50;
-  let priceZone: "Bargain" | "Fair Market" | "Overpriced" | "Unknown" = "Unknown";
-  let zoneColor = "#64748b";
-
-  if (marketData && marketData.bargainPrice && marketData.topPrice) {
-    const { bargainPrice, medianPrice, topPrice } = marketData;
-    
-    if (askingPriceNum < bargainPrice) {
-      priceZone = "Bargain";
-      zoneColor = "#10b981"; // Emerald
-      // Map asking price in the lower bounds
-      const ratio = askingPriceNum / bargainPrice;
-      clearingMeterPercent = Math.max(5, Math.round(ratio * 30));
-    } else if (askingPriceNum <= topPrice) {
-      priceZone = "Fair Market";
-      zoneColor = "#3b82f6"; // Indigo/blue
-      // Map asking price linearly between bargain and top
-      const range = topPrice - bargainPrice || 1;
-      const ratio = (askingPriceNum - bargainPrice) / range;
-      clearingMeterPercent = 30 + Math.round(ratio * 40); // Between 30% and 70%
-    } else {
-      priceZone = "Overpriced";
-      zoneColor = "#ef4444"; // Red
-      // Map asking price in higher bounds
-      const ratio = (askingPriceNum - topPrice) / (topPrice || 1);
-      clearingMeterPercent = Math.min(95, 70 + Math.round(ratio * 25));
-    }
-  }
-
-  const componentTypes = [
-    { type: "saddle", label: "Saddle" },
-    { type: "handlebars", label: "Cockpit" },
-    { type: "brakes", label: "Brakes" },
-    { type: "frame", label: "Frame" },
-    { type: "fork", label: "Fork" },
-    { type: "wheels", label: "Rear Wheel" },
-    { type: "drivetrain", label: "Drivetrain" }
-  ];
-
-  return (
-    <main className="analyzer-page-root">
-      <style jsx global>{`
-        @import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
-
-        .analyzer-page-root {
-          font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-          background-color: #f8fafc;
-          color: #0f172a;
-          min-height: 100vh;
-          margin: 0;
-          padding: 0;
-        }
-
-        /* sticky minimalist header */
-        .analyzer-nav {
-          background: #ffffff;
-          border-bottom: 1px solid #e2e8f0;
-          padding: 14px 24px;
-          position: sticky;
-          top: 0;
-          z-index: 100;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-        }
-        .analyzer-logo {
-          font-weight: 800;
-          font-size: 20px;
-          color: #0f172a;
-          text-decoration: none;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-        .analyzer-nav-links {
-          display: flex;
-          gap: 4px;
-        }
-        .analyzer-nav-link {
-          padding: 6px 12px;
-          border-radius: 6px;
-          font-size: 13px;
-          font-weight: 600;
-          color: #64748b;
-          text-decoration: none;
-          transition: all 0.2s ease;
-        }
-        .analyzer-nav-link:hover {
-          color: #0f172a;
-          background: #f1f5f9;
-        }
-        .analyzer-nav-link.active {
-          color: #0f172a;
-          background: #f1f5f9;
-          font-weight: 700;
-        }
-
-        /* standard layout grid */
-        .analyzer-container {
-          max-width: 1280px;
-          margin: 0 auto;
-          padding: 24px;
-        }
-        .analyzer-grid {
-          display: grid;
-          grid-template-columns: 1fr 340px;
-          gap: 24px;
-        }
-        @media (max-width: 1024px) {
-          .analyzer-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-        @media (max-width: 640px) {
-          .form-row-2col {
-            grid-template-columns: 1fr !important;
-            gap: 0 !important;
-          }
-        }
+    setAppraisalTab("whole");`n 5eca781ffb80a3ccb308188a9f84955d38eeea87
 
         /* Modern card layout styling */
         .modern-card {
@@ -908,138 +639,7 @@ export default function AnalyzerPage() {
           <Link href="/extractor" className="analyzer-nav-link">Extractor</Link>
           <Link href="/mechanic" className="analyzer-nav-link">Mechanic</Link>
           <Link href="/ledger" className="analyzer-nav-link">Ledger</Link>
-          <Link href="/settings" className="analyzer-nav-link">Sniper</Link>
-        </div>
-      </div>
-
-      {/* ── Main Layout Container ──────────────────────────────────── */}
-      <div className="analyzer-container">
-        
-        {/* SKELETON / LOADER HUD */}
-        {loading && (
-          <div className="modern-card">
-            <div className="loader-overlay">
-              <div className="spinner" />
-              <div className="loading-title">Analyzing Classified Listing</div>
-              <div className="loading-desc">Extracting specifications, evaluating components, and scraping completed sales...</div>
-            </div>
-          </div>
-        )}
-
-        {/* SUBMISSION FORM VIEW (If NO Result and Not Loading) */}
-        {!result && !loading && (
-          <div className="analyzer-grid" style={{ gridTemplateColumns: "1fr" }}>
-            <div className="modern-card">
-              <div className="modern-card-title">
-                ✨ VeloStack Classified Listing Analyzer & KBB Index
-              </div>
-              
-              <form onSubmit={handleSubmit}>
-                <div className="form-group">
-                  <label className="form-label">Ad Title</label>
-                  <input
-                    className="modern-input"
-                    type="text"
-                    placeholder='e.g. "Trek FX 3 Hybrid Bike 2021"'
-                    value={form.title}
-                    onChange={(e) => saveFormState({ ...form, title: e.target.value })}
-                    required
-                  />
-                  <span className="input-subtext">Provide the exact model and year from the classified listing for precision scraping.</span>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Listing Description (optional)</label>
-                  <textarea
-                    className="modern-input"
-                    rows={8}
-                    style={{ resize: "vertical" }}
-                    placeholder="Paste the complete description containing components, wear issues, and history..."
-                    value={form.description}
-                    onChange={(e) => saveFormState({ ...form, description: e.target.value })}
-                  />
-                  <span className="input-subtext">Our appraiser AI will parse this structure to identify repairs and parts upgrades.</span>
-                </div>
-
-                <div className="form-group" style={{ maxWidth: 300 }}>
-                  <label className="form-label">Asking Price (€)</label>
-                  <input
-                    className="modern-input"
-                    type="number"
-                    min="1"
-                    step="1"
-                    placeholder="e.g. 350"
-                    value={form.askingPrice}
-                    onChange={(e) => saveFormState({ ...form, askingPrice: e.target.value })}
-                    required
-                  />
-                  <span className="input-subtext">Used to calculate target flip margin and clearing percentiles.</span>
-                </div>
-
-                <div className="form-row-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "18px" }}>
-                  <div className="form-group">
-                    <label className="form-label">Location / ZIP Code</label>
-                    <input
-                      className="modern-input"
-                      type="text"
-                      placeholder="e.g. Munich, Florida, Denver, or 80301"
-                      value={form.location}
-                      onChange={(e) => saveFormState({ ...form, location: e.target.value })}
-                    />
-                    <span className="input-subtext">Geographic market locator for regional arbitrage modifiers.</span>
-                    
-                    {/* Live typing auto-detect helper badge */}
-                    {form.location && (
-                      (() => {
-                        const detected = getClientDetectedProfile(form.location);
-                        if (!detected) return null;
-                        
-                        let badgeColor = "#64748b";
-                        let badgeBg = "#f1f5f9";
-                        if (detected.type === "urban") { badgeColor = "#2563eb"; badgeBg = "#eff6ff"; }
-                        else if (detected.type === "mountain") { badgeColor = "#059669"; badgeBg = "#ecfdf5"; }
-                        else if (detected.type === "flatland") { badgeColor = "#d97706"; badgeBg = "#fffbeb"; }
-                        
-                        return (
-                          <div style={{ 
-                            marginTop: "8px", 
-                            padding: "8px 12px", 
-                            borderRadius: "6px", 
-                            fontSize: "11px", 
-                            color: badgeColor, 
-                            backgroundColor: badgeBg, 
-                            border: `1px solid ${badgeColor}20`,
-                            fontWeight: 600,
-                            lineHeight: "1.4"
-                          }}>
-                            ⚡ Auto-Detected: <strong>{detected.label}</strong>
-                            <div style={{ fontWeight: "normal", fontSize: "10px", marginTop: "2px", opacity: 0.9 }}>
-                              {detected.details}
-                            </div>
-                          </div>
-                        );
-                      })()
-                    )}
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Market Archetype Profile</label>
-                    <select
-                      className="modern-input"
-                      value={form.marketProfile}
-                      onChange={(e) => saveFormState({ ...form, marketProfile: e.target.value as any })}
-                      style={{ height: "42px" }}
-                    >
-                      <option value="">Auto-Detect from Location</option>
-                      <option value="urban">Urban Commuter Hub (+10% Road/Gravel/City, -30% DOM)</option>
-                      <option value="mountain">Mountain Trail Zone (+15% MTB, -40% DOM)</option>
-                      <option value="flatland">Flat Suburban Sprawl (-15% Road/Gravel, +50% DOM)</option>
-                      <option value="standard">Standard Baseline Market (0% Modifier)</option>
-                    </select>
-                    <span className="input-subtext">Override or force a specific regional cluster calculation.</span>
-                  </div>
-                </div>
-
+          <Link href="/settings" className="analyzer-nav-link">Sniper</Link>`n 5eca781ffb80a3ccb308188a9f84955d38eeea87
                 {error && (
                   <div style={{ border: "1px solid #fecaca", backgroundColor: "#fef2f2", color: "#991b1b", padding: "12px", borderRadius: "8px", marginBottom: "18px", fontSize: "13px" }}>
                     <strong>Error:</strong> {error}
@@ -1087,7 +687,7 @@ export default function AnalyzerPage() {
             </div>
 
             {appraisalTab === "whole" ? (
-              <div className="analyzer-grid">
+              <div className="analyzer-grid">`n 5eca781ffb80a3ccb308188a9f84955d38eeea87
             
             {/* Left Content Pane */}
             <div className="analyzer-left-pane">
@@ -1404,84 +1004,10 @@ export default function AnalyzerPage() {
                   )}
                 </div>
               )}
-
-              {/* KBB Empirical Index Card */}
-              {marketData && (
-                <div className="modern-card">
-                  <div className="modern-card-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span>📖 Kelley Blue Book Index</span>
-                    <span className={`confidence-badge ${
-                      marketData.confidence === "high" ? "confidence-high" :
-                      marketData.confidence === "medium" ? "confidence-medium" :
-                      "confidence-low"
-                    }`}>
-                      {marketData.confidence} Vol
-                    </span>
-                  </div>
-
-                  <div className="kbb-percentile-grid">
-                    <div className="kbb-percentile-card">
-                      <div className="kbb-percentile-label">Bargain</div>
-                      <div className="kbb-percentile-value">€{marketData.bargainPrice}</div>
-                    </div>
-                    <div className="kbb-percentile-card">
-                      <div className="kbb-percentile-value" style={{ color: "#3b82f6" }}>€{marketData.medianPrice}</div>
-                      <div className="kbb-percentile-label" style={{ fontSize: "8px", marginTop: 2 }}>Median</div>
-                    </div>
-                    <div className="kbb-percentile-card">
-                      <div className="kbb-percentile-label">Top Tier</div>
-                      <div className="kbb-percentile-value">€{marketData.topPrice}</div>
-                    </div>
-                  </div>
-
-                  {/* clearing meter gauge */}
-                  <div className="clearing-meter-container">
-                    <div className="clearing-meter-labels">
-                      <span className="meter-label-left">Bargain</span>
-                      <span className="meter-label-center">Fair clearing</span>
-                      <span className="meter-label-right">Overpriced</span>
-                    </div>
-                    <div className="clearing-meter-bar">
-                      <div 
-                        className="clearing-meter-pointer" 
-                        style={{ left: `${clearingMeterPercent}%` }} 
-                        title={`Asking Price: €${askingPriceNum}`}
-                      />
-                    </div>
-                    <div style={{ textAlign: "center", fontSize: "11px", fontWeight: "700", color: zoneColor, marginTop: 12 }}>
-                      Asking price is in the {priceZone} zone
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Rules block */}
-              <div className="modern-card">
-                <div className="modern-card-title">Appraiser Rules</div>
-                <ol className="rules-list">
-                  <li>Estimations are generated from scraped empirical classified listings.</li>
-                  <li>Hourly return parameters simulate manual repair rates.</li>
-                  <li>Check local component sizes (frame, bottom bracket spacing) before purchasing spares.</li>
-                </ol>
-              </div>
-
-            </div>
-
-          </div>
-        ) : (
-          result.partOutCalc && (
-            <PartOutDetails
-              partOutCalc={result.partOutCalc}
-              askingPrice={askingPriceNum}
-              wholeBikeProfit={dynamicProfit}
-              estimatedResalePrice={dynamicResaleValue}
-            />
-          )
-        )}
-      </div>
-    )}
+`n 5eca781ffb80a3ccb308188a9f84955d38eeea87
 
       </div>
     </main>
   );
 }
+

@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useTracker } from "@/app/tracker/context";
 import { PartType, PART_TYPE_LABELS } from "@/lib/tracker-types";
 
-// Extends PartType labels to include custom saddle/grip/matchmaker categories
+// Extends PartType labels to include custom accessories and fitment categories.
 const ALL_CATEGORY_LABELS: Record<string, string> = {
   ...PART_TYPE_LABELS,
   saddle: "Saddle",

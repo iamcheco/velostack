@@ -71,6 +71,13 @@ export default function DirectoryPage() {
               <td style={{ padding: "8px", border: "1px solid #ccc" }}><Link href="/settings" style={{ color: "#0000ff", textDecoration: "underline" }}>AI Background Deal Sniper</Link></td>
               <td style={{ padding: "8px", border: "1px solid #ccc" }}>Configure automated background scanners matching brand/radius criteria, checking duplicate caches, and triggering real-time SMS deal notifications.</td>
             </tr>
+            <tr>
+              <td style={{ padding: "8px", border: "1px solid #ccc", fontWeight: "bold", color: "green" }}>LIVE</td>
+              <td style={{ padding: "8px", border: "1px solid #ccc" }}>Phase 7</td>
+              <td style={{ padding: "8px", border: "1px solid #ccc" }}><Link href="/tracker" style={{ color: "#0000ff", textDecoration: "underline" }}>Pre-Sold Reservation Publisher</Link></td>
+              <td style={{ padding: "8px", border: "1px solid #ccc" }}>Publish build reservations, collect upgrade selections, and confirm deposit bookings from the tracker control panel.</td>
+            </tr>
+
           </tbody>
         </table>
         

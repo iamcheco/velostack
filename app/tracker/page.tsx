@@ -9,6 +9,7 @@ import RideLogTab from "@/app/tracker/components/RideLogTab";
 import WearReportTab from "@/app/tracker/components/WearReportTab";
 import PartsBinTab from "@/app/tracker/components/PartsBinTab";
 import ListingGeneratorModal from "@/app/tracker/components/ListingGeneratorModal";
+import PublishComingSoonModal from "@/app/tracker/components/PublishComingSoonModal";
 import { BIKE_TYPE_LABELS } from "@/lib/tracker-types";
 import { getTotalBikeKm } from "@/lib/wear-engine";
 import BuildMatchmaker from "@/app/tracker/components/BuildMatchmaker";
@@ -16,6 +17,7 @@ import BuildMatchmaker from "@/app/tracker/components/BuildMatchmaker";
 function TrackerContent() {
   const { store, selectedBikeId } = useTracker();
   const [activeTab, setActiveTab] = useState<"parts" | "ride" | "wear" | "parts_bin" | "matchmaker">("parts");
+  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [isListingModalOpen, setIsListingModalOpen] = useState(false);
 
   const selectedBike = store.bikes.find(b => b.id === selectedBikeId);
@@ -313,14 +315,22 @@ function TrackerContent() {
                 </div>
               </div>
             </div>
-            
-            <button
-              className="btn-modern-primary"
-              style={{ padding: "8px 14px", fontSize: 12, boxShadow: "0 4px 10px rgba(15, 23, 42, 0.15)" }}
-              onClick={() => setIsListingModalOpen(true)}
-            >
-              ✨ Generate Sale Listing
-            </button>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+              <button
+                className="btn-modern-secondary"
+                style={{ padding: "8px 14px", fontSize: 12, boxShadow: "0 4px 10px rgba(15, 23, 42, 0.08)" }}
+                onClick={() => setIsPublishModalOpen(true)}
+              >
+                📢 Publish Coming Soon
+              </button>
+              <button
+                className="btn-modern-primary"
+                style={{ padding: "8px 14px", fontSize: 12, boxShadow: "0 4px 10px rgba(15, 23, 42, 0.15)" }}
+                onClick={() => setIsListingModalOpen(true)}
+              >
+                ✨ Generate Sale Listing
+              </button>
+            </div>
           </div>
         )}
 
@@ -383,6 +393,13 @@ function TrackerContent() {
           bikeParts={bikeParts}
           allRides={store.rides}
           replacements={store.replacements}
+        />
+      )}
+      {selectedBike && (
+        <PublishComingSoonModal
+          isOpen={isPublishModalOpen}
+          onClose={() => setIsPublishModalOpen(false)}
+          bike={selectedBike}
         />
       )}
     </div>

@@ -65,12 +65,13 @@ export const TrackerProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    // Load frame specs and mounted parts
     const rawSpecs = localStorage.getItem("vst_frame_specs");
     if (rawSpecs) {
       try {
         parsed.bikeFrameSpecs = JSON.parse(rawSpecs);
-      } catch {}
+      } catch {
+        parsed.bikeFrameSpecs = {};
+      }
     } else {
       parsed.bikeFrameSpecs = {};
     }
@@ -79,13 +80,14 @@ export const TrackerProvider = ({ children }: { children: ReactNode }) => {
     if (rawMounted) {
       try {
         parsed.mountedParts = JSON.parse(rawMounted);
-      } catch {}
+      } catch {
+        parsed.mountedParts = {};
+      }
     } else {
       parsed.mountedParts = {};
     }
 
     setStore(parsed);
-
     const rawLedger = localStorage.getItem("vst_ledger");
     if (rawLedger) {
       try {
@@ -98,9 +100,9 @@ export const TrackerProvider = ({ children }: { children: ReactNode }) => {
 
   // Persist store on any change
   useEffect(() => {
-    const { bikeFrameSpecs, mountedParts, ...rest } = store;
+    const { bikeFrameSpecs, mountedParts, ...rest } = store as TrackerStore;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(rest));
-    
+
     if (bikeFrameSpecs) {
       localStorage.setItem("vst_frame_specs", JSON.stringify(bikeFrameSpecs));
     }
