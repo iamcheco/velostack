@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import type { TrackerStore, Bike, PartProfile, RideLog, PartReplacement } from "@/lib/tracker-types";
+import type { TrackerStore, Bike, PartProfile, RideLog, PartReplacement, PartsBinItem } from "@/lib/tracker-types";
 
 // localStorage key
 const STORAGE_KEY = "vst";
@@ -12,16 +12,24 @@ const defaultStore: TrackerStore = {
   parts: {},
   replacements: [],
   explanations: {},
+  partsBin: [],
 };
-// Selected bike ID (empty means no bike selected yet)
-
 
 const TrackerContext = createContext<{
   store: TrackerStore;
   setStore: React.Dispatch<React.SetStateAction<TrackerStore>>;
   selectedBikeId: string;
   setSelectedBikeId: React.Dispatch<React.SetStateAction<string>>;
-}>({ store: defaultStore, setStore: () => {}, selectedBikeId: '', setSelectedBikeId: () => {} });
+  addPartsBinItem: (item: Omit<PartsBinItem, "id" | "dateAdded">) => void;
+  removePartsBinItem: (id: string) => void;
+}>({
+  store: defaultStore,
+  setStore: () => {},
+  selectedBikeId: "",
+  setSelectedBikeId: () => {},
+  addPartsBinItem: () => {},
+  removePartsBinItem: () => {},
+});
 
 export const TrackerProvider = ({ children }: { children: ReactNode }) => {
   const [store, setStore] = useState<TrackerStore>(defaultStore);
@@ -33,6 +41,10 @@ export const TrackerProvider = ({ children }: { children: ReactNode }) => {
     if (raw) {
       try {
         const parsed = JSON.parse(raw) as TrackerStore;
+        // Ensure partsBin is initialized if missing in older schema
+        if (!parsed.partsBin) {
+          parsed.partsBin = [];
+        }
         setStore(parsed);
       } catch {
         // ignore parse errors
@@ -50,8 +62,39 @@ export const TrackerProvider = ({ children }: { children: ReactNode }) => {
     if (selectedBikeId) localStorage.setItem('selectedBikeId', selectedBikeId);
   }, [selectedBikeId]);
 
+  // Expose Actions
+  const addPartsBinItem = (item: Omit<PartsBinItem, "id" | "dateAdded">) => {
+    setStore((prev) => {
+      const newItem: PartsBinItem = {
+        ...item,
+        id: `partbin-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        dateAdded: new Date().toISOString().split("T")[0],
+      };
+      return {
+        ...prev,
+        partsBin: [...(prev.partsBin || []), newItem],
+      };
+    });
+  };
+
+  const removePartsBinItem = (id: string) => {
+    setStore((prev) => ({
+      ...prev,
+      partsBin: (prev.partsBin || []).filter((item) => item.id !== id),
+    }));
+  };
+
   return (
-    <TrackerContext.Provider value={{ store, setStore, selectedBikeId, setSelectedBikeId }}>
+    <TrackerContext.Provider
+      value={{
+        store,
+        setStore,
+        selectedBikeId,
+        setSelectedBikeId,
+        addPartsBinItem,
+        removePartsBinItem,
+      }}
+    >
       {children}
     </TrackerContext.Provider>
   );
