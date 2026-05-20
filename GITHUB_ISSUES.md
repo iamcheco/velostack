@@ -73,7 +73,7 @@ Once a bike's upgrades and repairs are completed, the flipper wants to list it f
 ---
 
 ### [Issue #3] Create Profit & Loss (P&L) Ledger & Flip Dashboard
-* **Status**: 🔲 Backlog
+* **Status**: ✅ Completed
 * **Priority**: Medium
 * **Target Files**:
   - `lib/tracker-types.ts` (Add ledger metrics interfaces)
@@ -106,9 +106,9 @@ Flipping is an accounting game. Flippers need to track their initial purchase pr
 3. **Visual Data Charts**: Build clean HTML/CSS visual ledger bars mapping total capital deployed vs. realized returns.
 
 #### Acceptance Criteria
-- [ ] A dedicated `/ledger` dashboard displays key counters: Net Profit, Capital Invested, Average Flip Time, and Hourly Earnings.
-- [ ] Transactions can be filtered by active builds vs. sold flips.
-- [ ] Users can edit cost rows on-the-fly and add custom expenses (gas, shipping fees).
+- [x] A dedicated `/ledger` dashboard displays key counters: Net Profit, Capital Invested, Average Flip Time, and Hourly Earnings.
+- [x] Transactions can be filtered by active builds vs. sold flips.
+- [x] Users can edit cost rows on-the-fly and add custom expenses (gas, shipping fees).
 
 ---
 

@@ -711,6 +711,7 @@ export default function AnalyzerPage() {
           <Link href="/tracker" className="reddit-tab">tracker</Link>
           <Link href="/extractor" className="reddit-tab">extractor</Link>
           <Link href="/mechanic" className="reddit-tab">mechanic</Link>
+          <Link href="/ledger" className="reddit-tab">ledger</Link>
         </div>
       </div>
 

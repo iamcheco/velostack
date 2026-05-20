@@ -1,115 +1,123 @@
-# Implementation Plan — Phase 4: Pocket Bike Mechanic AI (Real Tool Integration)
+# Implementation Plan — Issue #3: Profit & Loss (P&L) Ledger & Flip Dashboard (Hustle OS)
 
-We will build the **Pocket Bike Mechanic AI** page under `/mechanic` with a premium modern white-background design, fully integrating **real advanced tools** (OpenCV.js, ONNX Runtime Web for real YOLO browser inference, Supabase integration, and Zod schemas) so you can learn and use these state-of-the-art web technologies!
-
----
-
-## Technical Stack & Real Tools Architecture
-
-We will implement the real technologies to create a high-fidelity learning experience:
-
-### 1. Real OpenCV.js (Client-side WASM)
-- **Tool**: Official OpenCV.js (`https://docs.opencv.org/4.5.4/opencv.js`).
-- **Integration**: Loaded asynchronously on the client via Next.js `<Script>` tag with an elegant onload callback.
-- **Real Processing**: Users can upload a photo and run actual **OpenCV Canny Edge Detection** (`cv.Canny`) and **Grayscale conversion** (`cv.cvtColor`) directly inside the browser using WASM-powered image matrices (`cv.Mat`).
-
-### 2. Real YOLO & ONNX Runtime Web
-- **Tool**: ONNX Runtime Web (`onnxruntime-web`).
-- **Integration**: We will load a pre-trained lightweight YOLOv8 ONNX model in the browser and run live inference using WASM execution providers.
-- **Real Detection**: The page will perform a real forward pass on the uploaded image matrix, decode the bounding boxes (class, confidence, $x, y, w, h$), and draw real-time glowing detection vectors!
-
-### 3. Canvas Interactions: Konva.js / SVG Overlays
-- **Tool**: HTML5 Canvas / SVG interaction layers.
-- **Integration**: To ensure maximum reliability in Next.js SSR without hydration crashes, we will implement standard, high-performance draggable anchor overlays via standard React events. This establishes a bulletproof foundation for the pixels-to-mm calibration card and ruler.
-
-### 4. Persistence: Supabase Database Integration
-- **Tool**: `@supabase/supabase-js` and Supabase SQL.
-- **Integration**: We will create `lib/supabase.ts` containing the standard Supabase client initialization.
-- **Relational Schemas**: We will write the database migration SQL to build the tables:
-  - `diagnoses` (stored diagnoses, confidence, severity, steps)
-  - `calibration_metrics` (px-per-mm, references, date)
-  - `demo_cases` (preset coordinates and baseline images)
-
-### 5. API & Validation: Zod
-- **Tool**: `zod`.
-- **Integration**: Complete schema definitions for validating incoming image uploads, calibration measurements, and component metadata on the server.
+We will build the **Profit & Loss (P&L) Ledger & Flip Dashboard** under `/ledger` with a premium modern white-background design, fully integrating transactional schemas, live aggregators, itemized part lists, and custom expense modules, and updating global navigation interfaces.
 
 ---
 
-## Proposed Changes
+## 🛠️ Technical Stack & Real Tools Architecture
 
-We will build the page in three incremental parts to keep updates manageable:
+We will implement the following:
 
-### Phase 4 Files
+### 1. Ledger Schema Definitions (`lib/tracker-types.ts`)
+- **Integration**: Define the `FlipTransaction` interface and extend `TrackerStore` or keep ledger states synchronized.
+- **Model**:
+  ```typescript
+  export interface FlipTransaction {
+    id: string;
+    bikeId: string;
+    title: string;
+    purchasePrice: number;
+    partsExpense: Array<{ id: string; partName: string; cost: number }>;
+    miscExpense: Array<{ id: string; name: string; cost: number }>;
+    laborHours: number;
+    hourlyRate: number;
+    askingPrice: number;
+    finalSalePrice?: number;
+    saleDate?: string;
+    status: "sourcing" | "in_progress" | "listed" | "sold";
+  }
+  ```
+
+### 2. State Integration & Actions (`app/tracker/context.tsx`)
+- **Integration**: Extend `TrackerContext` to store and manage transactions.
+- **Persistence**: Load and sync data under the `vst_ledger` localStorage key.
+- **Actions**:
+  - `addTransaction(tx: Omit<FlipTransaction, 'id'>): void`
+  - `updateTransaction(id: string, updates: Partial<FlipTransaction>): void`
+  - `deleteTransaction(id: string): void`
+
+### 3. Financial Metrics & Aggregators
+- **Net Realized Profit**: `sum(finalSalePrice - purchasePrice - sum(partsExpense) - sum(miscExpense))` (only for sold items).
+- **Capital Deployed**: `sum(purchasePrice + sum(partsExpense) + sum(miscExpense))` (across all active flips, or all transactions to show total deploy).
+- **Average ROI %**: `(Net Realized Profit / Total Investment on Sold Flips) * 100` across all sold transactions.
+- **Average Hourly Yield**: Average of `Net Profit / laborHours` for all sold transactions.
+- **Visual Ledger Bars**: Build clean, modern CSS horizontal progress bars comparing **Total Capital Invested** vs. **Realized Returns (Revenue)**.
+
+### 4. Premium White P&L Dashboard (`app/ledger/page.tsx`)
+- **Design System**: A sleek modern dashboard utilizing the `#ffffff` base, `#f8fafc` background, slate typography, elegant `1px` borders, soft shadows, and Plus Jakarta Sans.
+- **Top Financial Grid**: 4 custom-styled stat cards:
+  - **Net Realized Profit** (glowing emerald ledger style)
+  - **Average ROI %** (indigo style)
+  - **Capital Deployed** (grey minimalist card)
+  - **Average Hourly Yield** (amber/gold style)
+- **Active Flips vs. Sold Flips Toggles**: Smooth tab filters to separate builds in progress from realized sales.
+- **Dynamic Expanding Rows**: Expand transaction rows to show itemized parts and accessory expenses, add shipping/gas fees, and log labor hours.
+- **Add Miscellaneous Expense Form**: Simple inline field to log shipping, gas, and fees.
+- **New Transaction Modal**: Clean slide-over overlay to log purchase price, select an active parts tracker bike (pre-populating its parts and estimated costs!), and set status.
+
+---
+
+## 📂 Proposed Changes
+
+We will implement these changes across the following files:
 
 ```
 lib/
-  ├── mechanic-types.ts      ← [NEW] TypeScript definitions for OpenCV states, YOLO bounding boxes, and diagnoses
-  └── supabase.ts            ← [NEW] Real Supabase client initialization boilerplate
+  └── tracker-types.ts       ← [MODIFY] Add FlipTransaction schema definition
 app/
-  ├── api/
-  │   └── mechanic/
-  │       └── route.ts       ← [NEW] API route with robust Zod validation schema and backend handler
+  ├── ledger/
+  │   └── page.tsx           ← [NEW] Beautiful, high-contrast P&L ledger dashboard
+  ├── tracker/
+  │   ├── context.tsx        ← [MODIFY] Add ledger state, actions, and vst_ledger sync
+  │   └── page.tsx           ← [MODIFY] Update navigation header to include ledger
+  ├── extractor/
+  │   └── page.tsx           ← [MODIFY] Update navigation header to include ledger
   ├── mechanic/
-  │   └── page.tsx           ← [MODIFY] Modern clean white-background page loading OpenCV.js, executing ONNX inference, and rendering the calibration UI
+  │   └── page.tsx           ← [MODIFY] Update navigation header to include ledger
+  ├── analyzer/
+  │   └── page.tsx           ← [MODIFY] Update navigation header to include ledger
   └── all/
-      └── page.tsx           ← [MODIFY] Update Phase 4 status to LIVE with fully working navigation
+      └── page.tsx           ← [MODIFY] Add Ledger Dashboard to Phase Directory
 ```
 
 ---
 
-### Part 1: Foundations, Supabase & Zod Schemas
+## ✍️ Code Implementations & Prompts
 
-#### [NEW] [mechanic-types.ts](file:///c:/Users/Vedansh/OneDrive/New%20folder/velostack/lib/mechanic-types.ts)
-- Define standard interfaces for real OpenCV state (`Grayscale`, `Canny`), ONNX bounding boxes (`BoundingBox` with coordinates and class predictions), and Supabase persistence schemas.
-- Provide seed data for high-fidelity demo cases.
+### Part 1: Schema Updates & Context Extension
+- We will update `lib/tracker-types.ts` to add the `FlipTransaction` interface.
+- We will update `app/tracker/context.tsx` to include `transactions`, `addTransaction`, `updateTransaction`, and `deleteTransaction`.
+- Integrate smart pre-population: when adding a transaction, the user can select an existing bike, pulling its active wear component models and replacement costs directly as parts expenses.
 
-#### [NEW] [supabase.ts](file:///c:/Users/Vedansh/OneDrive/New%20folder/velostack/lib/supabase.ts)
-- Create a clean Supabase client setup:
-  ```ts
-  import { createClient } from "@supabase/supabase-js";
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-  export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-  ```
+### Part 2: Global Navigation Updates
+- We will update all page headers (`app/tracker/page.tsx`, `app/extractor/page.tsx`, `app/mechanic/page.tsx`, `app/analyzer/page.tsx`, `app/all/page.tsx`) to add a sleek, modern navigation tab pointing to `/ledger`.
+- In `/all/page.tsx`, we will add **Phase 5: P&L Ledger & Flip Dashboard** as a high-fidelity item.
 
-#### [NEW] [route.ts](file:///c:/Users/Vedansh/OneDrive/New%20folder/velostack/app/api/mechanic/route.ts)
-- Server POST route utilizing `zod` to validate base64 image strings, calibration settings, and model outputs.
-
----
-
-### Part 2: Real OpenCV.js & ONNX YOLO Engine
-
-#### [MODIFY] [page.tsx](file:///c:/Users/Vedansh/OneDrive/New%20folder/velostack/app/mechanic/page.tsx)
-- Replaces the placeholder file with the modern clean white-background workspace.
-- **OpenCV.js WASM Script Loader**: Loads the official OpenCV.js library asynchronously with a loading spinner HUD.
-- **Real OpenCV Processing**:
-  - Convert image to grayscale using `cv.cvtColor`.
-  - Apply real **Canny Edge Detection** using `cv.Canny` with adjustable high/low thresholds!
-- **ONNX Web Runtime YOLO Simulator**:
-  - Set up script hooks for loading ONNX models.
-  - Implement a highly structured, scalable ONNX forward-pass wrapper that maps image pixels to tensors and decodes outputs.
+### Part 3: The P&L Ledger Dashboard Page (`app/ledger/page.tsx`)
+- Implement a stunning responsive page wrapped in the `TrackerProvider` context.
+- Include the standard modern navigation header at the top.
+- Render the 4-card metric grid.
+- Build the "➕ Log New Transaction" modal allowing users to create custom transactions or select registered tracker bikes.
+- Design the CSS Ledger Bar comparing Deployed Capital vs. Returns.
+- Build the Active vs. Sold toggling table with expanding detail views, on-the-fly labor hour sliders, and dynamic parts/misc expense adding.
 
 ---
 
-### Part 3: Scale Calibration & Diagnosis Dashboard
-
-#### [MODIFY] [page.tsx](file:///c:/Users/Vedansh/OneDrive/New%20folder/velostack/app/mechanic/page.tsx) (Continued)
-- **Interactive Calibration Suite**:
-  - Reference selection (€2 Coin: 25.75mm, Credit Card: 85.6mm).
-  - Draggable scaling endpoints to establish pixels-per-mm ratio.
-  - Draggable measurement ruler overlay showing physical millimeters in a glowing clean tooltip.
-- **Modern Diagnosis Panel**:
-  - High-fidelity visual cards for Diagnosis, Tools Checklist, Parts List, and Step-by-Step guides.
-  - Interactive checkmarks and active progress meter.
-
----
-
-## Verification Plan
+## 🧪 Verification Plan
 
 ### Automated Tests
-- Run `npm run build` at the end of each part to guarantee zero bundling or TypeScript errors.
+- Validate TypeScript compilation of new context actions and components.
+- Run `npm run build` to confirm compiler compatibility.
 
 ### Manual Verification
-- Verify the OpenCV.js WASM loads correctly and binarizes/edges change when tweaking thresholds.
-- Verify drag-and-drop measurement rulers scale correctly.
+1. Navigate to `/ledger`.
+2. Add a test transaction: Bike `Specialized Diverge`, Purchase: `€300`, Parts cost: `€50` (pre-populated or custom), Labor: `5 hrs`, Asking: `€700`.
+3. Verify calculations:
+   - Total Investment is €350.
+   - Project Net Profit is €350.
+4. Mark the transaction as **Sold** at `€600`.
+5. Verify:
+   - Net Realized Profit updates to **€250**.
+   - Average ROI % displays **71.4%**.
+   - Average Hourly Yield displays **€50/hr**.
+6. Add a custom gas fee of `€20` in the miscellaneous list and ensure the Net Profit automatically decreases to `€230` and ROI to `65.7%`.

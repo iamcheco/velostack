@@ -289,6 +289,9 @@ function TrackerContent() {
           <Link href="/mechanic" className="tracker-nav-link">
             mechanic
           </Link>
+          <Link href="/ledger" className="tracker-nav-link">
+            ledger
+          </Link>
         </nav>
       </header>
 

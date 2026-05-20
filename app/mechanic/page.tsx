@@ -653,6 +653,9 @@ export default function MechanicPage() {
             extractor
           </Link>
           <span className="mechanic-nav-link active">mechanic</span>
+          <Link href="/ledger" className="mechanic-nav-link">
+            ledger
+          </Link>
         </nav>
       </header>
 

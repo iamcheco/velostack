@@ -101,6 +101,21 @@ export interface PartsBinItem {
   dateAdded: string;
 }
 
+export interface FlipTransaction {
+  id: string;
+  bikeId: string; // references an existing bike id, or "custom"
+  title: string;
+  purchasePrice: number;
+  partsExpense: Array<{ id: string; partName: string; cost: number }>;
+  miscExpense: Array<{ id: string; name: string; cost: number }>;
+  laborHours: number;
+  hourlyRate: number;
+  askingPrice: number;
+  finalSalePrice?: number;
+  saleDate?: string;
+  status: "sourcing" | "in_progress" | "listed" | "sold";
+}
+
 export interface TrackerStore {
   bikes: Bike[];
   rides: RideLog[];
@@ -108,4 +123,5 @@ export interface TrackerStore {
   replacements: PartReplacement[];
   explanations: Record<string, string>;   // partKey → cached LLM text
   partsBin?: PartsBinItem[];
+  transactions?: FlipTransaction[];
 }
