@@ -9,6 +9,46 @@ interface FormState {
   title: string;
   description: string;
   askingPrice: string;
+  location: string;
+  marketProfile: "urban" | "mountain" | "flatland" | "standard" | "";
+}
+
+// Client-side helper for real-time location archetype hints
+function getClientDetectedProfile(location: string) {
+  if (!location) return null;
+  const loc = location.toLowerCase().trim();
+
+  // ZIP codes
+  const usZipMatch = loc.match(/^\b\d{5}\b/);
+  if (usZipMatch) {
+    const zip = parseInt(usZipMatch[0], 10);
+    const prefix = Math.floor(zip / 100);
+    if (prefix >= 100 && prefix <= 102) return { label: "Urban Commuter Hub", type: "urban", details: "+10% Road/Gravel Resale, -30% Days on Market" };
+    if (prefix >= 320 && prefix <= 349) return { label: "Flat Suburban Sprawl", type: "flatland", details: "-15% Road/Gravel Resale, +50% Days on Market" };
+    if ((prefix >= 800 && prefix <= 816) || (prefix >= 840 && prefix <= 847)) return { label: "Mountain Trail Zone", type: "mountain", details: "+15% MTB Resale, -40% Days on Market" };
+  }
+
+  const deZipMatch = loc.match(/^\b\d{5}\b/);
+  if (deZipMatch) {
+    const zipStr = deZipMatch[0];
+    if (zipStr.startsWith("80") || zipStr.startsWith("81") || zipStr.startsWith("10") || zipStr.startsWith("11") || zipStr.startsWith("12") || zipStr.startsWith("13") || zipStr.startsWith("14")) {
+      return { label: "Urban Commuter Hub", type: "urban", details: "+10% Road/Gravel/City Resale, -30% Days on Market" };
+    }
+    if (zipStr.startsWith("82") || zipStr.startsWith("83")) {
+      return { label: "Mountain Trail Zone", type: "mountain", details: "+15% MTB Resale, -40% Days on Market" };
+    }
+  }
+
+  // Keywords
+  const urbanKeywords = ["london", "munich", "paris", "nyc", "new york", "berlin", "amsterdam", "tokyo", "san francisco", "chicago", "boston", "vienna", "hamburg", "frankfurt"];
+  const mountainKeywords = ["denver", "innsbruck", "vancouver", "chamonix", "salt lake", "utah", "colorado", "alps", "seattle", "portland", "whistler", "calgary", "aspen", "boulder"];
+  const flatlandKeywords = ["florida", "miami", "houston", "dallas", "phoenix", "orlando", "tampa", "charlotte", "netherlands"];
+
+  if (urbanKeywords.some(kw => loc.includes(kw))) return { label: "Urban Commuter Hub", type: "urban", details: "+10% Road/Gravel/City Resale, -30% Days on Market" };
+  if (mountainKeywords.some(kw => loc.includes(kw))) return { label: "Mountain Trail Zone", type: "mountain", details: "+15% MTB Resale, -40% Days on Market" };
+  if (flatlandKeywords.some(kw => loc.includes(kw))) return { label: "Flat Suburban Sprawl", type: "flatland", details: "-15% Road/Gravel Resale, +50% Days on Market" };
+
+  return { label: "Standard Baseline Market", type: "standard", details: "No multipliers, baseline days on market" };
 }
 
 interface MarketDataResult {
@@ -149,6 +189,8 @@ export default function AnalyzerPage() {
     title: "",
     description: "",
     askingPrice: "",
+    location: "",
+    marketProfile: "",
   });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -197,6 +239,8 @@ export default function AnalyzerPage() {
           title: form.title,
           description: form.description,
           askingPrice: price,
+          location: form.location || undefined,
+          marketProfile: form.marketProfile || undefined,
         }),
       }).then(res => {
         if (!res.ok) throw new Error("Analysis failed");
@@ -266,7 +310,7 @@ export default function AnalyzerPage() {
   };
 
   const handleReset = () => {
-    setForm({ title: "", description: "", askingPrice: "" });
+    setForm({ title: "", description: "", askingPrice: "", location: "", marketProfile: "" });
     sessionStorage.removeItem("vst_analyzer_form");
     setResult(null);
     setMarketData(null);
@@ -409,6 +453,12 @@ export default function AnalyzerPage() {
         @media (max-width: 1024px) {
           .analyzer-grid {
             grid-template-columns: 1fr;
+          }
+        }
+        @media (max-width: 640px) {
+          .form-row-2col {
+            grid-template-columns: 1fr !important;
+            gap: 0 !important;
           }
         }
 
@@ -922,6 +972,70 @@ export default function AnalyzerPage() {
                   <span className="input-subtext">Used to calculate target flip margin and clearing percentiles.</span>
                 </div>
 
+                <div className="form-row-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "18px" }}>
+                  <div className="form-group">
+                    <label className="form-label">Location / ZIP Code</label>
+                    <input
+                      className="modern-input"
+                      type="text"
+                      placeholder="e.g. Munich, Florida, Denver, or 80301"
+                      value={form.location}
+                      onChange={(e) => saveFormState({ ...form, location: e.target.value })}
+                    />
+                    <span className="input-subtext">Geographic market locator for regional arbitrage modifiers.</span>
+                    
+                    {/* Live typing auto-detect helper badge */}
+                    {form.location && (
+                      (() => {
+                        const detected = getClientDetectedProfile(form.location);
+                        if (!detected) return null;
+                        
+                        let badgeColor = "#64748b";
+                        let badgeBg = "#f1f5f9";
+                        if (detected.type === "urban") { badgeColor = "#2563eb"; badgeBg = "#eff6ff"; }
+                        else if (detected.type === "mountain") { badgeColor = "#059669"; badgeBg = "#ecfdf5"; }
+                        else if (detected.type === "flatland") { badgeColor = "#d97706"; badgeBg = "#fffbeb"; }
+                        
+                        return (
+                          <div style={{ 
+                            marginTop: "8px", 
+                            padding: "8px 12px", 
+                            borderRadius: "6px", 
+                            fontSize: "11px", 
+                            color: badgeColor, 
+                            backgroundColor: badgeBg, 
+                            border: `1px solid ${badgeColor}20`,
+                            fontWeight: 600,
+                            lineHeight: "1.4"
+                          }}>
+                            ⚡ Auto-Detected: <strong>{detected.label}</strong>
+                            <div style={{ fontWeight: "normal", fontSize: "10px", marginTop: "2px", opacity: 0.9 }}>
+                              {detected.details}
+                            </div>
+                          </div>
+                        );
+                      })()
+                    )}
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Market Archetype Profile</label>
+                    <select
+                      className="modern-input"
+                      value={form.marketProfile}
+                      onChange={(e) => saveFormState({ ...form, marketProfile: e.target.value as any })}
+                      style={{ height: "42px" }}
+                    >
+                      <option value="">Auto-Detect from Location</option>
+                      <option value="urban">Urban Commuter Hub (+10% Road/Gravel/City, -30% DOM)</option>
+                      <option value="mountain">Mountain Trail Zone (+15% MTB, -40% DOM)</option>
+                      <option value="flatland">Flat Suburban Sprawl (-15% Road/Gravel, +50% DOM)</option>
+                      <option value="standard">Standard Baseline Market (0% Modifier)</option>
+                    </select>
+                    <span className="input-subtext">Override or force a specific regional cluster calculation.</span>
+                  </div>
+                </div>
+
                 {error && (
                   <div style={{ border: "1px solid #fecaca", backgroundColor: "#fef2f2", color: "#991b1b", padding: "12px", borderRadius: "8px", marginBottom: "18px", fontSize: "13px" }}>
                     <strong>Error:</strong> {error}
@@ -1143,6 +1257,123 @@ export default function AnalyzerPage() {
                   </tbody>
                 </table>
               </div>
+
+              {/* 📍 Local Arbitrage & Liquidity Index HUD */}
+              {result && (
+                <div className="modern-card" style={{ position: "relative", overflow: "hidden" }}>
+                  {result.isVerdictDowngraded && (
+                    <div style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "4px",
+                      height: "100%",
+                      backgroundColor: "#ef4444"
+                    }} />
+                  )}
+                  <div className="modern-card-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span>📍 Local Arbitrage Index</span>
+                    <span style={{
+                      fontSize: "9px",
+                      fontWeight: 800,
+                      padding: "1px 6px",
+                      borderRadius: "4px",
+                      textTransform: "uppercase",
+                      backgroundColor: result.liquidityScore === "high" ? "#d1fae5" : result.liquidityScore === "medium" ? "#e0f2fe" : "#fee2e2",
+                      color: result.liquidityScore === "high" ? "#065f46" : result.liquidityScore === "medium" ? "#0369a1" : "#991b1b",
+                    }}>
+                      {result.liquidityScore} turn
+                    </span>
+                  </div>
+
+                  <p style={{ fontSize: "11px", color: "#64748b", margin: "-6px 0 14px 0" }}>
+                    Market Archetype: <strong style={{ color: "#334155", textTransform: "capitalize" }}>{result.marketProfile}</strong>
+                    {result.location && ` (${result.location})`}
+                  </p>
+
+                  {/* Estimated Days on Market Gauge */}
+                  <div style={{ marginBottom: "20px", textAlign: "center" }}>
+                    <div style={{ fontSize: "32px", fontWeight: 800, color: "#0f172a", letterSpacing: "-1px" }}>
+                      {result.estimatedDaysOnMarket} <span style={{ fontSize: "14px", fontWeight: 600, color: "#64748b" }}>days</span>
+                    </div>
+                    <div style={{ fontSize: "11px", fontWeight: 600, color: "#475569", marginTop: "-2px" }}>
+                      Estimated Days on Market
+                    </div>
+                    
+                    {/* CSS bar gauge */}
+                    <div style={{ 
+                      height: "8px", 
+                      borderRadius: "9999px", 
+                      backgroundColor: "#f1f5f9", 
+                      position: "relative",
+                      marginTop: "12px",
+                      overflow: "hidden"
+                    }}>
+                      <div style={{
+                        height: "100%",
+                        width: `${Math.min(100, (result.estimatedDaysOnMarket / 60) * 100)}%`,
+                        backgroundColor: result.estimatedDaysOnMarket <= 20 ? "#10b981" : result.estimatedDaysOnMarket <= 40 ? "#3b82f6" : "#ef4444",
+                        borderRadius: "9999px",
+                        transition: "width 0.3s ease"
+                      }} />
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", fontWeight: 700, color: "#94a3b8", marginTop: "4px" }}>
+                      <span>FAST (&le;20d)</span>
+                      <span>MODERATE</span>
+                      <span>SLOW (&gt;40d)</span>
+                    </div>
+                  </div>
+
+                  {/* Modifiers breakdown table */}
+                  <table className="metrics-table" style={{ marginTop: "10px", borderTop: "1px dashed #e2e8f0" }}>
+                    <tbody>
+                      <tr>
+                        <td className="label" style={{ fontSize: "12px" }}>Base Resale Value</td>
+                        <td className="value" style={{ fontSize: "12px" }}>€{Math.round(result.originalResalePrice)}</td>
+                      </tr>
+                      <tr>
+                        <td className="label" style={{ fontSize: "12px" }}>Regional Modifier</td>
+                        <td className="value" style={{ 
+                          fontSize: "12px", 
+                          color: result.priceModifierPercent > 0 ? "#10b981" : result.priceModifierPercent < 0 ? "#ef4444" : "#64748b" 
+                        }}>
+                          {result.priceModifierPercent > 0 ? `+${result.priceModifierPercent}%` : `${result.priceModifierPercent}%`}
+                          {result.priceModifierPercent !== 0 && (
+                            <span style={{ fontSize: "10px", fontWeight: "normal", color: "#64748b", marginLeft: "4px" }}>
+                              ({result.priceModifierPercent > 0 ? `+€${Math.round(result.originalResalePrice * result.priceModifierPercent / 100)}` : `-€${Math.round(Math.abs(result.originalResalePrice * result.priceModifierPercent / 100))}`})
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="label" style={{ fontSize: "12px" }}>Days modifier</td>
+                        <td className="value" style={{ 
+                          fontSize: "12px",
+                          color: result.daysOnMarketModifierPercent < 0 ? "#10b981" : result.daysOnMarketModifierPercent > 0 ? "#ef4444" : "#64748b"
+                        }}>
+                          {result.daysOnMarketModifierPercent > 0 ? `+${result.daysOnMarketModifierPercent}%` : `${result.daysOnMarketModifierPercent}%`}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  {/* Verdict Downgraded Alert Banner */}
+                  {result.isVerdictDowngraded && (
+                    <div style={{ 
+                      marginTop: "16px", 
+                      padding: "10px 12px", 
+                      borderRadius: "8px", 
+                      backgroundColor: "#fef2f2", 
+                      border: "1px solid #fecaca",
+                      fontSize: "11px",
+                      color: "#991b1b",
+                      lineHeight: "1.4"
+                    }}>
+                      <strong>⚠️ High Liquidity Holding Risk:</strong> Capital recovery timeline exceeds 45 days. Verdict auto-downgraded from <strong>GREAT FLIP</strong> to <strong>FAIR DEAL</strong>.
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* KBB Empirical Index Card */}
               {marketData && (

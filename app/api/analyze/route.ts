@@ -7,6 +7,8 @@ const schema = z.object({
   description: z.string(),
   askingPrice: z.number().positive(),
   comparablePrice: z.number().positive().optional(),
+  location: z.string().optional(),
+  marketProfile: z.enum(["urban", "mountain", "flatland", "standard"]).optional(),
 });
 
 export async function POST(req: NextRequest) {

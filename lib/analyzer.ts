@@ -41,6 +41,68 @@ export interface AnalysisResult {
     tier: string;
   } | null;
   priceVsMarket: "below" | "at" | "above" | "unknown";
+  
+  // Geographic and Liquidity fields
+  location?: string;
+  marketProfile: "urban" | "mountain" | "flatland" | "standard";
+  originalResalePrice: number;
+  priceModifierPercent: number;
+  estimatedDaysOnMarket: number;
+  daysOnMarketModifierPercent: number;
+  liquidityScore: "high" | "medium" | "low";
+  isVerdictDowngraded: boolean;
+}
+
+export function resolveMarketProfile(
+  location?: string,
+  marketProfileInput?: "urban" | "mountain" | "flatland" | "standard"
+): "urban" | "mountain" | "flatland" | "standard" {
+  if (marketProfileInput && marketProfileInput !== "standard" && ["urban", "mountain", "flatland", "standard"].includes(marketProfileInput)) {
+    return marketProfileInput;
+  }
+
+  if (!location) {
+    return "standard";
+  }
+
+  const loc = location.toLowerCase().trim();
+
+  // ZIP codes
+  // US ZIP codes: 
+  // NYC prefix (100, 101, 102) -> urban
+  // Florida prefix (320-349) -> flatland
+  // Colorado/Utah (800-816, 840-847) -> mountain
+  const usZipMatch = loc.match(/^\b\d{5}\b/);
+  if (usZipMatch) {
+    const zip = parseInt(usZipMatch[0], 10);
+    const prefix = Math.floor(zip / 100);
+    if (prefix >= 100 && prefix <= 102) return "urban";
+    if (prefix >= 320 && prefix <= 349) return "flatland";
+    if ((prefix >= 800 && prefix <= 816) || (prefix >= 840 && prefix <= 847)) return "mountain";
+  }
+
+  // German ZIP codes
+  const deZipMatch = loc.match(/^\b\d{5}\b/);
+  if (deZipMatch) {
+    const zipStr = deZipMatch[0];
+    if (zipStr.startsWith("80") || zipStr.startsWith("81") || zipStr.startsWith("10") || zipStr.startsWith("11") || zipStr.startsWith("12") || zipStr.startsWith("13") || zipStr.startsWith("14")) {
+      return "urban";
+    }
+    if (zipStr.startsWith("82") || zipStr.startsWith("83")) {
+      return "mountain";
+    }
+  }
+
+  // Keywords
+  const urbanKeywords = ["london", "munich", "paris", "nyc", "new york", "berlin", "amsterdam", "tokyo", "san francisco", "chicago", "boston", "vienna", "hamburg", "frankfurt"];
+  const mountainKeywords = ["denver", "innsbruck", "vancouver", "chamonix", "salt lake", "utah", "colorado", "alps", "seattle", "portland", "whistler", "calgary", "aspen", "boulder"];
+  const flatlandKeywords = ["florida", "miami", "houston", "dallas", "phoenix", "orlando", "tampa", "charlotte", "netherlands"];
+
+  if (urbanKeywords.some(kw => loc.includes(kw))) return "urban";
+  if (mountainKeywords.some(kw => loc.includes(kw))) return "mountain";
+  if (flatlandKeywords.some(kw => loc.includes(kw))) return "flatland";
+
+  return "standard";
 }
 
 // Fallback provider (Groq) for flexibility based on Second Brain project
@@ -54,6 +116,8 @@ export async function analyzeListing(input: {
   description: string;
   askingPrice: number;
   comparablePrice?: number;
+  location?: string;
+  marketProfile?: "urban" | "mountain" | "flatland" | "standard";
 }): Promise<AnalysisResult> {
   const fullText = `${input.title}\n\n${input.description}`;
 
@@ -100,20 +164,80 @@ export async function analyzeListing(input: {
     })
   );
   
-  // Use user-provided comparable if available, else use LLM estimation
-  const estimatedResalePrice = input.comparablePrice ?? object.estimatedResaleValueEur;
+  // Resolve geographic archetype
+  const resolvedProfile = resolveMarketProfile(input.location, input.marketProfile);
+
+  // Check if it's a gravel bike (road bike but gravel term matches)
+  const bikeType = object.type.toLowerCase();
+  const isGravel = bikeType === "road" && (
+    input.title.toLowerCase().includes("gravel") || 
+    input.description.toLowerCase().includes("gravel")
+  );
+
+  let priceModifierPercent = 0;
+  let daysOnMarketModifierPercent = 0;
+
+  if (resolvedProfile === "urban") {
+    // Commuter-friendly categories: road, gravel, hybrid, city
+    if (bikeType === "road" || isGravel || bikeType === "hybrid" || bikeType === "city") {
+      priceModifierPercent = 10;
+      daysOnMarketModifierPercent = -30;
+    }
+  } else if (resolvedProfile === "mountain") {
+    // MTB category
+    if (bikeType === "mtb") {
+      priceModifierPercent = 15;
+      daysOnMarketModifierPercent = -40;
+    }
+  } else if (resolvedProfile === "flatland") {
+    // Road/gravel drag in flatlands
+    if (bikeType === "road" || isGravel) {
+      priceModifierPercent = -15;
+      daysOnMarketModifierPercent = 50;
+    }
+  }
+
+  const originalResalePrice = input.comparablePrice ?? object.estimatedResaleValueEur;
+  const estimatedResalePrice = Math.round(originalResalePrice * (1 + priceModifierPercent / 100));
+
   const profit = estimatedResalePrice - input.askingPrice - totalRepairCost;
   const profitMarginPercent = estimatedResalePrice > 0 ? Math.round((profit / estimatedResalePrice) * 100) : 0;
 
+  // Calculate Days on Market
+  let baselineDays = 25;
+  if (bikeType === "mtb") baselineDays = 32;
+  else if (bikeType === "road" || isGravel) baselineDays = 28;
+  else if (bikeType === "ebike") baselineDays = 20;
+  else if (bikeType === "hybrid" || bikeType === "city") baselineDays = 22;
+
+  const estimatedDaysOnMarket = Math.max(
+    5,
+    Math.round(baselineDays * (1 + daysOnMarketModifierPercent / 100))
+  );
+
+  let liquidityScore: "high" | "medium" | "low" = "medium";
+  if (estimatedDaysOnMarket <= 20) {
+    liquidityScore = "high";
+  } else if (estimatedDaysOnMarket > 40) {
+    liquidityScore = "low";
+  }
+
   let verdict: AnalysisResult["verdict"];
   let verdictReason: string;
+  let isVerdictDowngraded = false;
 
   if (dealbreaker) {
     verdict = "AVOID";
     verdictReason = `Dealbreaker issue detected — not worth repairing.`;
   } else if (profit >= 80 && object.confidence >= 0.5) {
-    verdict = "GREAT FLIP";
-    verdictReason = `Strong margin of €${profit} after estimated €${totalRepairCost} in repairs. Act fast.`;
+    if (estimatedDaysOnMarket > 45) {
+      verdict = "FAIR DEAL";
+      verdictReason = `Strong margins of €${profit}, but geographic time-to-sell risk is too high (${estimatedDaysOnMarket} days). Holding risk downgraded verdict from GREAT FLIP.`;
+      isVerdictDowngraded = true;
+    } else {
+      verdict = "GREAT FLIP";
+      verdictReason = `Strong margin of €${profit} after estimated €${totalRepairCost} in repairs. Act fast.`;
+    }
   } else if (profit >= 25) {
     verdict = "FAIR DEAL";
     verdictReason = `Modest margin of €${profit}. Safe flip if you can do repairs yourself.`;
@@ -149,5 +273,15 @@ export async function analyzeListing(input: {
       tier: estimatedResalePrice > 1000 ? "premium" : estimatedResalePrice > 400 ? "mid" : "budget"
     },
     priceVsMarket,
+    
+    // Geographic & Liquidity properties
+    location: input.location,
+    marketProfile: resolvedProfile,
+    originalResalePrice,
+    priceModifierPercent,
+    estimatedDaysOnMarket,
+    daysOnMarketModifierPercent,
+    liquidityScore,
+    isVerdictDowngraded,
   };
 }
