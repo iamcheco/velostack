@@ -543,6 +543,9 @@ export default function ExtractorPage() {
           <Link href="/mechanic" className="modern-nav-link">
             mechanic
           </Link>
+          <Link href="/ledger" className="modern-nav-link">
+            ledger
+          </Link>
         </nav>
       </header>
 

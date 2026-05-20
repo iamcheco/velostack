@@ -14,6 +14,8 @@ export default function DirectoryPage() {
         <Link href="/extractor" style={{ color: "#0000ff", textDecoration: "underline" }}>extractor</Link>
         <span style={{ color: "#888" }}>|</span>
         <Link href="/mechanic" style={{ color: "#0000ff", textDecoration: "underline" }}>mechanic</Link>
+        <span style={{ color: "#888" }}>|</span>
+        <Link href="/ledger" style={{ color: "#0000ff", textDecoration: "underline" }}>ledger</Link>
       </header>
 
       <div style={{ padding: "15px" }}>
@@ -54,6 +56,12 @@ export default function DirectoryPage() {
               <td style={{ padding: "8px", border: "1px solid #ccc" }}>Phase 4</td>
               <td style={{ padding: "8px", border: "1px solid #ccc" }}><Link href="/mechanic" style={{ color: "#0000ff", textDecoration: "underline" }}>Pocket Bike Mechanic AI</Link></td>
               <td style={{ padding: "8px", border: "1px solid #ccc" }}>Upload a photo of any bike issue. Real client-side OpenCV.js Canny edge detection, ONNX Web YOLO inference, and scale calibration measurements. <b>(Created by Vedansh)</b></td>
+            </tr>
+            <tr>
+              <td style={{ padding: "8px", border: "1px solid #ccc", fontWeight: "bold", color: "green" }}>LIVE</td>
+              <td style={{ padding: "8px", border: "1px solid #ccc" }}>Phase 5</td>
+              <td style={{ padding: "8px", border: "1px solid #ccc" }}><Link href="/ledger" style={{ color: "#0000ff", textDecoration: "underline" }}>P&L Flip Ledger</Link></td>
+              <td style={{ padding: "8px", border: "1px solid #ccc" }}>Track transaction purchase prices, parts expenses, custom labor yields, and realized profit margins.</td>
             </tr>
           </tbody>
         </table>

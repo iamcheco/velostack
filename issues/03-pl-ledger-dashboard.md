@@ -1,9 +1,9 @@
 # Issue #3: Profit & Loss (P&L) Ledger & Flip Dashboard (Hustle OS)
 
 ## 📋 Status
-* **Status**: 🔲 Backlog
+* **Status**: ✅ Completed
 * **Priority**: Medium
-* **Assigned To**: None
+* **Assigned To**: iamcheco <iamcheco@github.com>
 * **Labels**: `feature`, `hustle-os`, `accounting`, `dashboard`
 
 ---
@@ -67,11 +67,11 @@ Build a beautiful, high-contrast modern white dashboard at `app/ledger/page.tsx`
 ---
 
 ## 🎯 Acceptance Criteria
-- [ ] Users can navigate to the `/ledger` dashboard route using the primary navigation header.
-- [ ] High-contrast cards display real-time computed profit, ROI %, deployed capital, and hourly rate metrics.
-- [ ] Users can edit/update sale prices, labor hours, and add custom shipping/gas costs.
-- [ ] Calculation engine accurately subtracts parts costs and misc costs from final sale prices to yield ROI.
-- [ ] Clean modern responsive layout conforming fully to the premium white design guidelines.
+- [x] Users can navigate to the `/ledger` dashboard route using the primary navigation header.
+- [x] High-contrast cards display real-time computed profit, ROI %, deployed capital, and hourly rate metrics.
+- [x] Users can edit/update sale prices, labor hours, and add custom shipping/gas costs.
+- [x] Calculation engine accurately subtracts parts costs and misc costs from final sale prices to yield ROI.
+- [x] Clean modern responsive layout conforming fully to the premium white design guidelines.
 
 ---
 
