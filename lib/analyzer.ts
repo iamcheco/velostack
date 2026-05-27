@@ -1,8 +1,9 @@
 import { generateObject } from 'ai';
 import { z } from 'zod';
 import { google } from '@ai-sdk/google';
+import { groq } from '@ai-sdk/groq';
 import { createOpenAI } from '@ai-sdk/openai';
-import { fetchLiveMarketPrice, calculatePartOutValues, PartOutCalculation } from './pricing';`n 5eca781ffb80a3ccb308188a9f84955d38eeea87
+import { fetchLiveMarketPrice, calculatePartOutValues, PartOutCalculation } from './pricing';
 
 // ============================================================
 // VeloStack — Listing Analyzer Rules Engine
@@ -105,8 +106,10 @@ export function resolveMarketProfile(
   if (mountainKeywords.some(kw => loc.includes(kw))) return "mountain";
   if (flatlandKeywords.some(kw => loc.includes(kw))) return "flatland";
 
-  return "standard";`n 5eca781ffb80a3ccb308188a9f84955d38eeea87
-}): Promise<AnalysisResult> {
+  return "standard";
+}
+
+export async function analyzeInput(input: { title: string; description: string; location?: string; marketProfile?: "urban" | "mountain" | "flatland" | "standard"; comparablePrice?: number; askingPrice: number }): Promise<AnalysisResult> {
   const fullText = `${input.title}\n\n${input.description}`;
 
   // Prioritize Gemini if key exists, else Groq
@@ -212,7 +215,7 @@ export function resolveMarketProfile(
 
   let verdict: AnalysisResult["verdict"];
   let verdictReason: string;
-  let isVerdictDowngraded = false;`n 5eca781ffb80a3ccb308188a9f84955d38eeea87
+  let isVerdictDowngraded = false;
 
   if (dealbreaker) {
     verdict = "AVOID";
@@ -225,7 +228,7 @@ export function resolveMarketProfile(
     } else {
       verdict = "GREAT FLIP";
       verdictReason = `Strong margin of €${profit} after estimated €${totalRepairCost} in repairs. Act fast.`;
-    }`n 5eca781ffb80a3ccb308188a9f84955d38eeea87
+    }
   } else if (profit >= 25) {
     verdict = "FAIR DEAL";
     verdictReason = `Modest margin of €${profit}. Safe flip if you can do repairs yourself.`;
@@ -253,7 +256,36 @@ export function resolveMarketProfile(
     estimatedResalePrice,
     input.description
   );
-`n 5eca781ffb80a3ccb308188a9f84955d38eeea87
+
+  return {
+    verdict,
+    verdictReason,
+    estimatedRepairCost: totalRepairCost,
+    estimatedResalePrice,
+    estimatedProfit: profit,
+    profitMarginPercent,
+    confidence: object.confidence,
+    detectedIssues: object.issues.map(i => ({
+      part: i.part,
+      issue: i.issue,
+      estimatedCost: i.estimatedRepairCostEur,
+    })),
+    components: componentsWithPrices,
+    bikeTier: {
+      brand: object.brand,
+      type: object.type,
+      tier: bikeTierName,
+    },
+    priceVsMarket,
+    location: input.location,
+    marketProfile: resolvedProfile,
+    originalResalePrice,
+    priceModifierPercent,
+    estimatedDaysOnMarket,
+    daysOnMarketModifierPercent,
+    liquidityScore,
+    isVerdictDowngraded,
+    partOutCalc,
   };
 }
 

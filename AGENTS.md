@@ -26,6 +26,9 @@
 | 2 | Parts Wear Tracker | `/tracker` | ✅ LIVE | VeloStack Team |
 | 3 | YouTube Skill Extractor | `/extractor` | ✅ LIVE | VeloStack Team |
 | 4 | Pocket Bike Mechanic AI | `/mechanic` | ✅ LIVE | Vedansh |
+| 5 | Profit & Loss Flip Ledger | `/ledger` | ✅ LIVE | VeloStack Team |
+| 6 | AI Background Deal Sniper | `/settings` | ✅ LIVE | VeloStack Team |
+| 7 | Pre-Sold Reservation Publisher | `/tracker` | ✅ LIVE | VeloStack Team |
 
 **Update this table immediately when you complete or start a phase.**
 
@@ -111,7 +114,29 @@ These rules exist to prevent wasted turns and token loops:
 - **"Start Phase N"** = ask 2–3 critical questions, then write implementation plan, wait for approval.
 
 ---
+### Model Routing — Pick the Right Tool for the Job
 
+| Task | Use this model |
+|------|---------------|
+| New phase / architecture | Gemini 3.1 Pro (High) OR Claude Opus 4.6 (Thinking) |
+| Multi-file feature (≥ 3 files) | Gemini 3.5 Flash (High) |
+| Single component or page | Gemini 3.5 Flash (Medium) OR Claude Haiku |
+| LLM prompt refinement | Claude Sonnet 4.6 (Thinking) |
+| TypeScript types / API scaffolding | Gemini 3.5 Flash (Medium) |
+| Bug fix / quick debug | Claude Haiku OR Gemini 3.5 Flash (Medium) |
+| CSS / design polish | Gemini 3.5 Flash (Medium) |
+| AGENTS.md / CURRENT_TASK.md updates | Gemini 3.5 Flash (Low) |
+| wear-engine.ts algorithm changes | Gemini 3.1 Pro (High) — data contract critical |
+| Security audit | Claude Sonnet 4.6 (Thinking) |
+| Second opinion / alt codegen | GPT-OSS 120B (Medium) |
+| Hardest multi-phase problem | Claude Opus 4.6 (Thinking) — use sparingly |
+
+**Context loading order** — always read in this sequence, stop when sufficient:
+1. `AGENTS.md` → 2. `CURRENT_TASK.md` → 3. Target file(s) → 4. Related files only if needed
+
+**Never** speculatively load files not in scope for the current task.
+
+---
 ## 6. How to Work Across Antigravity + VS Code Agents
 
 ### The problem:
@@ -140,6 +165,21 @@ You end up re-explaining the same project structure repeatedly.
 - Run `git add . && git commit -m "wip: <what you just did>"` before switching.
 - This gives VS Code agents a clean diff to inspect with `git diff HEAD~1`.
 
+**Tool-specific startup commands:**
+| Tool | Start session with |
+|------|-------------------|
+| **Antigravity** | Model auto-reads `AGENTS.md` via workspace context |
+| **GitHub Copilot Chat** | `@workspace /explain AGENTS.md` then describe task |
+| **Claude (VS Code ext.)** | `@workspace read AGENTS.md first, then CURRENT_TASK.md` |
+
+**Copilot vs Claude in VS Code — when to use which:**
+| Task | Use |
+|------|-----|
+| Inline autocomplete while typing | GitHub Copilot (always on) |
+| Single-function fix or rename | Copilot Chat (fast, inline) |
+| Multi-step bug with context | Claude Haiku 3.5 |
+| Architectural question or refactor | Switch to Antigravity |
+
 ---
 
 ## 7. API Patterns (copy these exactly)
@@ -155,13 +195,31 @@ const groq = createOpenAI({ baseURL: "https://api.groq.com/openai/v1", apiKey: p
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
+
+  // ⚡ Model selection: use Pro for complex/critical routes, Flash for standard
+  // Complex routes: /api/wear-explain, /api/analyze (full analysis)
+  // Standard routes: /api/research-part, /api/price-component, /api/market-data
+  const isComplexRoute = true; // set to false for lightweight routes
   const model = process.env.GOOGLE_GENERATIVE_AI_API_KEY
-    ? google("gemini-2.5-flash")
+    ? isComplexRoute
+      ? google("gemini-1.5-pro")   // wear-explain, full analyze
+      : google("gemini-1.5-flash") // research-part, price-component
     : groq("llama-3.3-70b-versatile");
+
   // ... generateObject / generateText
   return NextResponse.json(result);
 }
 ```
+
+**Route → Model assignment:**
+| API Route | Complexity | Model |
+|-----------|-----------|-------|
+| `/api/analyze` | Complex (full bike analysis) | `gemini-1.5-pro` |
+| `/api/wear-explain` | Complex (mechanic reasoning) | `gemini-1.5-pro` |
+| `/api/research-part` | Standard | `gemini-1.5-flash` |
+| `/api/price-component` | Standard | `gemini-1.5-flash` |
+| `/api/market-data` | Standard | `gemini-1.5-flash` |
+| `/api/strava/*` | No LLM needed | — |
 
 ---
 
@@ -392,3 +450,38 @@ User clicks "Connect Strava"
 | 2026-05-19 | Reddit CSS embedded per-page | Avoids CSS bleed between pages, easier to maintain |
 | 2026-05-19 | `CURRENT_TASK.md` pattern | Enables clean handoff between Antigravity and VS Code agents |
 
+## 19. Agent Model Selection Guide
+
+### Antigravity Models (select in Antigravity sidebar)
+
+| Model | When to use |
+|-------|-------------|
+| **Gemini 3.5 Flash (Low)** | Docs, AGENTS.md/CURRENT_TASK.md updates, trivial text edits |
+| **Gemini 3.5 Flash (Medium)** | Single-file patches, CSS, TypeScript types, API route scaffolding, bug fixes |
+| **Gemini 3.5 Flash (High)** | Multi-file features (≥ 3 files), structured code gen with schema context |
+| **Gemini 3.1 Pro (Low)** | Moderate complexity refactors, when Flash (High) is insufficient |
+| **Gemini 3.1 Pro (High)** | Architecture decisions, new phase planning, wear-engine algorithm changes |
+| **Claude Sonnet 4.6 (Thinking)** | LLM prompt engineering, security audit, correctness-critical code |
+| **Claude Opus 4.6 (Thinking)** | ☢️ Nuclear option — hardest architectural problems only, use very sparingly |
+| **GPT-OSS 120B (Medium)** | Second opinion / alternative code generation perspective |
+
+### VS Code Agents
+- **Claude Haiku 3.5** — Multi-step bugs, context-heavy fixes, small refactors.
+  Always start with `@workspace read AGENTS.md first, then CURRENT_TASK.md`.
+- **GitHub Copilot** — Inline autocomplete (always on) + Copilot Chat for single-function
+  fixes. Start Copilot Chat with `@workspace /explain AGENTS.md` then describe task.
+
+### Decision Flowchart
+
+```
+Task touches ≥ 3 files?
+  Yes → Needs architecture / new data contract / algorithm design?
+          Yes → Gemini 3.1 Pro (High)  OR  Claude Opus 4.6 (Thinking)
+          No  → Gemini 3.5 Flash (High)
+  No  → Prompt engineering, security, or correctness-critical?
+          Yes → Claude Sonnet 4.6 (Thinking)
+          No  → Single file?    → Gemini 3.5 Flash (Medium) OR Claude Haiku
+               Docs/text only? → Gemini 3.5 Flash (Low)
+               Need alt view?  → GPT-OSS 120B (Medium)
+               Inline typing?  → GitHub Copilot (autocomplete)
+```
