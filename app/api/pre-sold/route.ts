@@ -19,7 +19,7 @@ const upgradeSchema = z.object({
 const listingSchema = z.object({
   bikeId: z.string().min(1),
   name: z.string().min(1),
-  type: z.string().min(1),
+  type: z.enum(["road", "gravel", "mtb", "city", "ebike"]),
   description: z.string().min(1),
   targetBasePrice: z.number().nonnegative(),
   estimatedCompletionDate: z.string().min(1),

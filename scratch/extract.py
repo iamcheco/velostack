@@ -4,7 +4,7 @@ from PIL import Image
 import io
 
 pdf_path = r"d:\Downloads\Telegram Desktop\Bo Burnham - Egghead.pdf"
-out_dir = r"c:\Users\Vedansh\OneDrive\New folder\velostack\public\egghead"
+out_dir = r"c:\Users\Vedansh\OneDrive\velostack\public\egghead"
 os.makedirs(out_dir, exist_ok=True)
 
 doc = fitz.open(pdf_path)

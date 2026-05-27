@@ -1,9 +1,13 @@
 import { generateObject } from 'ai';
 import { z } from 'zod';
 import { google } from '@ai-sdk/google';
-import { groq } from '@ai-sdk/groq';
 import { createOpenAI } from '@ai-sdk/openai';
 import { fetchLiveMarketPrice, calculatePartOutValues, PartOutCalculation } from './pricing';
+
+const groq = createOpenAI({
+  baseURL: 'https://api.groq.com/openai/v1',
+  apiKey: process.env.GROQ_API_KEY,
+});
 
 // ============================================================
 // VeloStack — Listing Analyzer Rules Engine
@@ -288,4 +292,6 @@ export async function analyzeInput(input: { title: string; description: string; 
     partOutCalc,
   };
 }
+
+export const analyzeListing = analyzeInput;
 
